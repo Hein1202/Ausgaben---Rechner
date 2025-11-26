@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ausgaben (Version 45.11.25)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
+    input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
+
+    @media print {
+      body {
+        background-color: #ffffff;
+      }
+      body * {
+        visibility: hidden !important;
+      }
+      #printArea, #printArea * {
+        visibility: visible !important;
+      }
+      #printArea {
+        position: absolute;
+        inset: 0;
+        margin: 0;
+        padding: 16px;
+        background: #ffffff;
+      }
+    }
+  
+    input {
+      color: #111111;
+    }
+
+    .text-gray-600,
+    .text-gray-700,
+    .text-gray-800,
+    .text-gray-900 {
+      color: #000000 !important;
+    }
+
+    td input, td, .text-gray-600, .text-gray-700, .text-gray-800, .text-gray-900 {
+        font-weight:500 !important;
+        color:#000000 !important;
+    }
+
+    td input, td {
+        font-weight:700 !important;
+        color:#000000 !important;
+    }
+
+    td input, td, td span {
+        font-weight:700 !important;
+        color:#000000 !important;
+    }
+
+    .monthYear {
+      font-weight: 700 !important;
+      color: #000000 !important;
+    }
+</style>
+</head>
+<body class="p-6 bg-gray-100 text-gray-800">
+  <div class="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+      <span class="text-2xl">📊</span>
+      <span>Ausgaben</span>
+      <select id="monthSelect" class="border rounded px-2 py-1 text-sm">
+        <option value="">(Monat wählen)</option>
+        <option value="01">Januar</option>
+        <option value="02">Februar</option>
+        <option value="03">März</option>
+        <option value="04">April</option>
+        <option value="05">Mai</option>
+        <option value="06">Juni</option>
+        <option value="07">Juli</option>
+        <option value="08">August</option>
+        <option value="09">September</option>
+        <option value="10">Oktober</option>
+        <option value="11">November</option>
+        <option value="12">Dezember</option>
+      </select>
+      <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
+      </select>
+    </h1>
+      <span class="text-sm text-gray-500">Version 45.11.25</span>
+    </div>
+
+    <div class="flex gap-2 mb-4">
+      <button id="printBtn" class="bg-gray-600 text-white px-4 py-2 rounded">Drucken</button>
+      <button id="sortBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Sortieren ↓</button>
+      <button id="importBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">Importieren</button>
+      <button id="exportBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">Datei speichern</button>
+      <button id="addRowBtn" class="bg-green-600 text-white px-4 py-2 rounded ml-auto">+ Zeile</button>
+    </div>
+
+    <div id="printArea"></div>
+
+    <table class="w-full border text-sm" id="expenseTable">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="p-2 border">Datum</th>
+          <th class="p-2 border">Betrag (€)</th>
+          <th class="p-2 border">Beschreibung</th>
+          <th class="p-2 border">Aktion</th>
+        </tr>
+      </thead>
+      <tbody id="expenseBody"></tbody>
+      <tfoot>
+        <tr>
+          <td class="border-t p-1"></td>
+          <td class="border-t p-1 align-top">
+            <div class="text-sm space-y-1">
+              <div class="flex justify-between">
+                <strong>Gesamtsumme (Brutto):</strong>
+                <span id="total" class="ml-4">€ 0.00</span>
+              </div>
+              <div class="flex justify-between">
+                <strong>Nettobetrag:</strong>
+                <span id="net" class="ml-4">€ 0.00</span>
+              </div>
+              <div class="flex justify-between">
+                <strong>Mehrwertsteuer (19%):</strong>
+                <span id="vat" class="ml-4">€ 0.00</span>
+              </div>
+            </div>
+          </td>
+          <td class="border-t p-1"></td>
+          <td class="border-t p-1"></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <input type="file" id="importInput" accept=".json" style="display:none" />
+  </div>
+
+  <script>
+    let expenses = [];
+    let sortDirection = 'desc';
+
+    const expenseBody = document.getElementById('expenseBody');
+    const totalDisplay = document.getElementById('total');
+    const netDisplay = document.getElementById('net');
+    const vatDisplay = document.getElementById('vat');
+    const printArea = document.getElementById('printArea');
+    const monthSelect = document.getElementById('monthSelect');
+    const yearSelect = document.getElementById('yearSelect');
+
+    const MONTH_NAMES = {
+      "01": "Januar",
+      "02": "Februar",
+      "03": "März",
+      "04": "April",
+      "05": "Mai",
+      "06": "Juni",
+      "07": "Juli",
+      "08": "August",
+      "09": "September",
+      "10": "Oktober",
+      "11": "November",
+      "12": "Dezember"
+    };
+
+    function initMonthSelector() {
+      const now = new Date();
+      const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+      const currentYear = now.getFullYear();
+
+      if (monthSelect) {
+        if (monthSelect.querySelector(`option[value="${currentMonth}"]`)) {
+          monthSelect.value = currentMonth;
+        }
+      }
+
+      if (yearSelect) {
+        yearSelect.innerHTML = '';
+        for (let y = currentYear - 5; y <= currentYear + 5; y++) {
+          const opt = document.createElement('option');
+          opt.value = String(y);
+          opt.textContent = String(y);
+          yearSelect.appendChild(opt);
+        }
+        yearSelect.value = String(currentYear);
+      }
+    }
+
+    function save() {
+      localStorage.setItem('expenses_data', JSON.stringify(expenses));
+    }
+
+    function parseAmount(value) {
+      if (typeof value !== 'string') {
+        value = String(value ?? '');
+      }
+      value = value.trim();
+      if (!value) return 0;
+
+      const hasComma = value.includes(',');
+      const hasDot = value.includes('.');
+
+      if (hasComma && hasDot) {
+        value = value.replace(/\./g, '').replace(',', '.');
+      } else if (hasComma && !hasDot) {
+        value = value.replace(',', '.');
+      }
+      const n = parseFloat(value);
+      return isNaN(n) ? 0 : n;
+    }
+
+    function recalcTotals() {
+      let total = 0;
+
+      expenses.forEach(exp => {
+        total += parseAmount(exp.amount);
+      });
+
+      const net = total / 1.19;
+      const vat = total - net;
+
+      totalDisplay.textContent = formatEuro(total);
+      netDisplay.textContent = formatEuro(net);
+      vatDisplay.textContent = formatEuro(vat);
+    }
+
+
+    function getDateParts(iso) {
+      let year = '';
+      let month = '';
+      let day = '';
+      if (iso && typeof iso === 'string') {
+        const parts = iso.split('-');
+        if (parts.length === 3) {
+          year = parts[0];
+          month = parts[1];
+          day = parts[2];
+        }
+      }
+      if (!year || !month) {
+        const now = new Date();
+        year = (yearSelect && yearSelect.value)
+          ? yearSelect.value
+          : String(now.getFullYear());
+        month = monthSelect && monthSelect.value
+          ? monthSelect.value
+          : String(now.getMonth() + 1).padStart(2, '0');
+      }
+      return { year, month, day };
+    }
+
+    function buildDateFromDay(dayInput, existingIso) {
+      let day = String(dayInput || '').replace(/\D/g, '');
+      if (!day) return existingIso || '';
+      if (day.length === 1) {
+        day = '0' + day;
+      }
+      const parts = getDateParts(existingIso);
+      const year = parts.year;
+      const month = parts.month;
+      return `${year}-${month}-${day}`;
+    }
+
+    function render() {
+      expenseBody.innerHTML = '';
+
+      expenses.forEach((exp, index) => {
+        const row = document.createElement('tr');
+        const parts = getDateParts(exp.date);
+        const day = parts.day ? String(parseInt(parts.day, 10)) : '';
+        const monthYearLabel = parts.month && parts.year ? ` .${parts.month}.${parts.year}` : '';
+
+        row.innerHTML = `
+          <td class="border p-1">
+            <div class="flex items-center gap-1">
+              <input
+                type="text"
+                inputmode="numeric"
+                value="${day}"
+                data-index="${index}"
+                data-field="date"
+                class="w-16 p-1 text-right"
+              />
+              <span class="monthYear">${monthYearLabel}</span>
+            </div>
+          </td>
+          <td class="border p-1 w-28">
+            <input
+              type="text"
+              inputmode="decimal"
+              placeholder="0,00"
+              value="${exp.amount || ''}"
+              data-index="${index}"
+              data-field="amount"
+              class="w-full p-1 text-right"
+            />
+          </td>
+          <td class="border p-1">
+            <input
+              type="text"
+              value="${exp.desc || ''}"
+              data-index="${index}"
+              data-field="desc"
+              class="w-full p-1"
+            />
+          </td>
+          <td class="border p-1 text-center">
+            <div class="flex justify-center gap-2">
+              <button
+                data-index="${index}"
+                class="insertBtn text-green-600"
+                title="Zeile darunter einfügen"
+              >
+                ➕
+              </button>
+              <button
+                data-index="${index}"
+                class="deleteBtn text-red-600"
+                title="Zeile löschen"
+              >
+                🗑️
+              </button>
+            </div>
+          </td>
+        `;
+        expenseBody.appendChild(row);
+      });
+
+      recalcTotals();
+    }
+
+    function formatDateGerman(iso) {
+      if (!iso) return '';
+      const parts = iso.split('-');
+      if (parts.length !== 3) return iso;
+      const [y, m, d] = parts;
+      return `${d}.${m}.${y}`;
+    }
+
+    function getSelectedMonthName() {
+      if (!monthSelect) return '';
+      const val = monthSelect.value;
+      if (!val) return '';
+      return MONTH_NAMES[val] || '';
+    }
+
+    function getSelectedYear() {
+      if (!yearSelect) return '';
+      const val = yearSelect.value;
+      if (!val) return '';
+      return val;
+    }
+
+    function getPrintTitle() {
+      const monthName = getSelectedMonthName();
+      const year = getSelectedYear();
+      if (monthName && year) return `Ausgaben – ${monthName} ${year}`;
+      if (monthName) return `Ausgaben – ${monthName}`;
+      if (year) return `Ausgaben – ${year}`;
+      return 'Ausgaben';
+    }
+
+    function buildPrintArea() {
+      if (!printArea) return;
+
+      const title = getPrintTitle();
+
+      const rows = expenses || [];
+
+      let rowsHtml = '';
+      rows.forEach(exp => {
+        const date = formatDateGerman(exp.date);
+        const amountNumber = parseAmount(exp.amount);
+        const amountFormatted = amountNumber ? formatEuro(amountNumber) : '';
+        const desc = exp.desc || '';
+        rowsHtml += `
+          <tr>
+            <td style="padding:4px;border:1px solid #ccc;">${date}</td>
+            <td style="padding:4px;border:1px solid #ccc;text-align:right;">${amountFormatted}</td>
+            <td style="padding:4px;border:1px solid #ccc;">${desc}</td>
+          </tr>
+        `;
+      });
+
+      // Summen über alle Einträge berechnen (wie auf der Hauptseite)
+      recalcTotals();
+      const totalText = totalDisplay.textContent;
+      const netText = netDisplay.textContent;
+      const vatText = vatDisplay.textContent;
+
+      const summaryRows = rows.length ? `
+        <tr>
+          <td style="padding:4px;border:1px solid #ccc;font-weight:bold;">Gesamtsumme (Brutto gesamt):</td>
+          <td style="padding:4px;border:1px solid #ccc;text-align:right;">${totalText}</td>
+          <td style="padding:4px;border:1px solid #ccc;"></td>
+        </tr>
+        <tr>
+          <td style="padding:4px;border:1px solid #ccc;font-weight:bold;">Nettobetrag (gesamt):</td>
+          <td style="padding:4px;border:1px solid #ccc;text-align:right;">${netText}</td>
+          <td style="padding:4px;border:1px solid #ccc;"></td>
+        </tr>
+        <tr>
+          <td style="padding:4px;border:1px solid #ccc;font-weight:bold;">Mehrwertsteuer (19 % gesamt):</td>
+          <td style="padding:4px;border:1px solid #ccc;text-align:right;">${vatText}</td>
+          <td style="padding:4px;border:1px solid #ccc;"></td>
+        </tr>
+      ` : '';
+
+      printArea.innerHTML = `
+        <h1 style="font-size:20px;font-weight:bold;margin-bottom:12px;">${title}</h1>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px;">
+          <thead>
+            <tr>
+              <th style="padding:4px;border:1px solid #ccc;text-align:left;">Datum</th>
+              <th style="padding:4px;border:1px solid #ccc;text-align:right;width:90px;">Betrag</th>
+              <th style="padding:4px;border:1px solid #ccc;text-align:left;">Beschreibung</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml || `<tr><td colspan="3" style="padding:4px;border:1px solid #ccc;font-style:italic;">Keine Einträge.</td></tr>`}
+            ${summaryRows}
+          </tbody>
+        </table>
+      `;
+    }
+
+
+    document.getElementById('addRowBtn').addEventListener('click', () => {
+      expenses.push({
+        date: "",
+        amount: "",
+        desc: ""
+      });
+      save();
+      render();
+    });
+
+    expenseBody.addEventListener('input', (e) => {
+      const index = e.target.dataset.index;
+      const field = e.target.dataset.field;
+      if (index !== undefined && field) {
+        if (field === 'date') {
+          expenses[index].date = buildDateFromDay(e.target.value, expenses[index].date);
+          save();
+          render();
+        } else {
+          expenses[index][field] = e.target.value;
+          save();
+          recalcTotals();
+        }
+      }
+    });
+
+    expenseBody.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const index = parseInt(btn.dataset.index);
+
+      if (btn.classList.contains('deleteBtn')) {
+        expenses.splice(index, 1);
+        save();
+        render();
+      }
+
+      if (btn.classList.contains('insertBtn')) {
+        const newEntry = {
+          date: "",
+          amount: "",
+          desc: ""
+        };
+        expenses.splice(index + 1, 0, newEntry);
+        save();
+        render();
+      }
+    });
+
+    document.getElementById('sortBtn').addEventListener('click', (e) => {
+      sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      expenses.sort((a, b) => {
+        return sortDirection === 'asc'
+          ? (a.date || '').localeCompare(b.date || '')
+          : (b.date || '').localeCompare(a.date || '');
+      });
+      e.target.textContent = 'Sortieren ' + (sortDirection === 'asc' ? '↑' : '↓');
+      save();
+      render();
+    });
+
+    document.getElementById('printBtn').addEventListener('click', () => {
+      buildPrintArea();
+      window.print();
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(expenses, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ausgaben_export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('importBtn').addEventListener('click', () => {
+      document.getElementById('importInput').click();
+    });
+
+    document.getElementById('importInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const imported = JSON.parse(reader.result);
+          if (Array.isArray(imported)) {
+            expenses = imported.map(item => ({
+              date: item.date || '',
+              amount: item.amount || '',
+              desc: item.desc || item.description || ''
+            }));
+            save();
+            render();
+          } else {
+            alert("Ungültiges Format.");
+          }
+        } catch {
+          alert("Fehler beim Import.");
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    function formatEuro(value) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
+    }
+
+    function load() {
+      const data = localStorage.getItem('expenses_data');
+      if (data) {
+        expenses = JSON.parse(data);
+      }
+      initMonthSelector();
+      render();
+    }
+
+    window.onafterprint = () => {
+      if (printArea) {
+        printArea.innerHTML = "";
+      }
+    };
+
+    // Start
+    load();
+  </script>
+</body>
+</html>
