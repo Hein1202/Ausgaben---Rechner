@@ -3,8 +3,57 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 46.11.25)</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Ausgaben (Version 51.11.25)</title>
+  <script src="https://cdn.tailwindcss.com">
+    document.getElementById('excelExportBtn').addEventListener('click', () => {
+      const wsData = [
+        ["Datum", "Betrag (€)", "Beschreibung"]
+      ];
+
+      let total = 0;
+      expenses.forEach(exp => {
+        const amount = parseAmount(exp.amount);
+        total += amount;
+        wsData.push([
+          formatDateGerman(exp.date),
+          amount,
+          exp.desc || ''
+        ]);
+      });
+
+      const net = total / 1.19;
+      const vat = total - net;
+
+      wsData.push([]);
+      wsData.push(["Gesamtsumme (Brutto):", total]);
+      wsData.push(["Nettobetrag:", net]);
+      wsData.push(["Mehrwertsteuer (19%):", vat]);
+
+      const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Ausgaben");
+
+      const month = getSelectedMonthName();
+      const year = getSelectedYear();
+      const filename = `Ausgaben_${month}_${year || ''}.xlsx`;
+
+      XLSX.writeFile(workbook, filename);
+    });
+
+
+    document.getElementById('clearAllBtn').addEventListener('click', () => {
+      if (confirm("Möchtest du wirklich alle Daten löschen?")) {
+        expenses = [{
+          date: "",
+          amount: "",
+          desc: ""
+        }];
+        save();
+        render();
+      }
+    });
+
+</script>
   <style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
     input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
@@ -59,6 +108,56 @@
       color: #000000 !important;
     }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+    document.getElementById('excelExportBtn').addEventListener('click', () => {
+      const wsData = [
+        ["Datum", "Betrag (€)", "Beschreibung"]
+      ];
+
+      let total = 0;
+      expenses.forEach(exp => {
+        const amount = parseAmount(exp.amount);
+        total += amount;
+        wsData.push([
+          formatDateGerman(exp.date),
+          amount,
+          exp.desc || ''
+        ]);
+      });
+
+      const net = total / 1.19;
+      const vat = total - net;
+
+      wsData.push([]);
+      wsData.push(["Gesamtsumme (Brutto):", total]);
+      wsData.push(["Nettobetrag:", net]);
+      wsData.push(["Mehrwertsteuer (19%):", vat]);
+
+      const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Ausgaben");
+
+      const month = getSelectedMonthName();
+      const year = getSelectedYear();
+      const filename = `Ausgaben_${month}_${year || ''}.xlsx`;
+
+      XLSX.writeFile(workbook, filename);
+    });
+
+
+    document.getElementById('clearAllBtn').addEventListener('click', () => {
+      if (confirm("Möchtest du wirklich alle Daten löschen?")) {
+        expenses = [{
+          date: "",
+          amount: "",
+          desc: ""
+        }];
+        save();
+        render();
+      }
+    });
+
+</script>
 </head>
 <body class="p-6 bg-gray-100 text-gray-800">
   <div class="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
@@ -84,7 +183,7 @@
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 46.11.25</span>
+      <span class="text-sm text-gray-500">Version 51.11.25</span>
     </div>
 
     <div class="flex gap-2 mb-4">
@@ -92,7 +191,8 @@
       <button id="sortBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Sortieren ↓</button>
       <button id="importBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">Daten laden</button>
       <button id="exportBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">Datei speichern</button>
-      <button id="addRowBtn" class="bg-green-600 text-white px-4 py-2 rounded ml-auto">+ Zeile</button>
+<button id="excelExportBtn" class="bg-purple-600 text-white px-4 py-2 rounded">📄 Excel speichern</button>
+      
     </div>
 
     <div id="printArea"></div>
@@ -131,6 +231,10 @@
         </tr>
       </tfoot>
     </table>
+    <div class="mt-4 text-right">
+      <button id="clearAllBtn" class="bg-red-600 text-white px-4 py-2 rounded">🗑️ Alle Daten löschen</button>
+    </div>
+
 
     <input type="file" id="importInput" accept=".json" style="display:none" />
   </div>
@@ -300,7 +404,7 @@
               value="${exp.desc || ''}"
               data-index="${index}"
               data-field="desc"
-              class="w-full p-1"
+              class="w-[400px] p-1"
             />
           </td>
           <td class="border p-1 text-center">
@@ -420,21 +524,15 @@
             ${summaryRows}
           </tbody>
         </table>
+    <div class="mt-4 text-right">
+      <button id="clearAllBtn" class="bg-red-600 text-white px-4 py-2 rounded">🗑️ Alle Daten löschen</button>
+    </div>
+
       `;
     }
 
 
-    document.getElementById('addRowBtn').addEventListener('click', () => {
-      expenses.push({
-        date: "",
-        amount: "",
-        desc: ""
-      });
-      save();
-      render();
-    });
-
-    expenseBody.addEventListener('input', (e) => {
+    expenseBody.addEventListener('change', (e) => {
       const index = e.target.dataset.index;
       const field = e.target.dataset.field;
       if (index !== undefined && field) {
@@ -538,6 +636,13 @@
       if (data) {
         expenses = JSON.parse(data);
       }
+      if (!Array.isArray(expenses) || expenses.length === 0) {
+        expenses = [{
+          date: "",
+          amount: "",
+          desc: ""
+        }];
+      }
       initMonthSelector();
       render();
     }
@@ -550,6 +655,55 @@
 
     // Start
     load();
-  </script>
+  
+    document.getElementById('excelExportBtn').addEventListener('click', () => {
+      const wsData = [
+        ["Datum", "Betrag (€)", "Beschreibung"]
+      ];
+
+      let total = 0;
+      expenses.forEach(exp => {
+        const amount = parseAmount(exp.amount);
+        total += amount;
+        wsData.push([
+          formatDateGerman(exp.date),
+          amount,
+          exp.desc || ''
+        ]);
+      });
+
+      const net = total / 1.19;
+      const vat = total - net;
+
+      wsData.push([]);
+      wsData.push(["Gesamtsumme (Brutto):", total]);
+      wsData.push(["Nettobetrag:", net]);
+      wsData.push(["Mehrwertsteuer (19%):", vat]);
+
+      const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Ausgaben");
+
+      const month = getSelectedMonthName();
+      const year = getSelectedYear();
+      const filename = `Ausgaben_${month}_${year || ''}.xlsx`;
+
+      XLSX.writeFile(workbook, filename);
+    });
+
+
+    document.getElementById('clearAllBtn').addEventListener('click', () => {
+      if (confirm("Möchtest du wirklich alle Daten löschen?")) {
+        expenses = [{
+          date: "",
+          amount: "",
+          desc: ""
+        }];
+        save();
+        render();
+      }
+    });
+
+</script>
 </body>
 </html>
