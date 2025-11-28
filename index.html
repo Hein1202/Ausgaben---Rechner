@@ -574,7 +574,7 @@ window.addEventListener("load", () => {
       rows.forEach(exp => {
         const date = formatDateGerman(exp.date);
         const amountNumber = parseAmount(exp.amount);
-        const amountFormatted = amountNumber ? formatEuro(amountNumber) : '';
+        const amountFormatted = amountNumber ? (Math.round(amountNumber*100)/100).toFixed(2).replace('.', ',') : '';
         const desc = exp.desc || '';
         rowsHtml += `
           <tr>
@@ -591,20 +591,23 @@ window.addEventListener("load", () => {
       const netText = netDisplay.textContent;
       const vatText = vatDisplay.textContent;
 
-      const summaryRows = rows.length ? `
+      const totalPlain = totalText.replace('€','').trim();
+const netPlain = netText.replace('€','').trim();
+const vatPlain = vatText.replace('€','').trim();
+const summaryRows = rows.length ? `
         <tr>
           <td style="padding:4px;border:1px solid #ccc;font-weight:bold;">Gesamtsumme (Brutto gesamt):</td>
-          <td style="padding:4px;border:1px solid #ccc;text-align:right;">${totalText}</td>
+          <td style="padding:4px;border:1px solid #ccc;text-align:right;">${totalPlain}</td>
           <td style="padding:4px;border:1px solid #ccc;"></td>
         </tr>
         <tr>
           <td style="padding:4px;border:1px solid #ccc;font-weight:bold;">Nettobetrag (gesamt):</td>
-          <td style="padding:4px;border:1px solid #ccc;text-align:right;">${netText}</td>
+          <td style="padding:4px;border:1px solid #ccc;text-align:right;">${netPlain}</td>
           <td style="padding:4px;border:1px solid #ccc;"></td>
         </tr>
         <tr>
           <td style="padding:4px;border:1px solid #ccc;font-weight:bold;">Mehrwertsteuer (19 % gesamt):</td>
-          <td style="padding:4px;border:1px solid #ccc;text-align:right;">${vatText}</td>
+          <td style="padding:4px;border:1px solid #ccc;text-align:right;">${vatPlain}</td>
           <td style="padding:4px;border:1px solid #ccc;"></td>
         </tr>
       ` : '';
