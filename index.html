@@ -58,9 +58,12 @@ window.addEventListener("load", () => {
 
     y += lineHeight;
     if (y > 270){ doc.addPage(); y = 20; }
-    doc.text(`Gesamtsumme (Brutto): ${euro(total)} €`, 10, y); y+=lineHeight;
-    doc.text(`Nettobetrag: ${euro(netRaw)} €`, 10, y); y+=lineHeight;
-    doc.text(`Mehrwertsteuer (19%): ${euro(vatRaw)} €`, 10, y);
+    doc.text(`Gesamtsumme \(Brutto\):`, 10, y);
+    textRight(doc, `${euro(total)} `, 80, y); y+=lineHeight;
+    doc.text(`Nettobetrag:`, 10, y);
+    textRight(doc, `${euro(netRaw)} `, 80, y); y+=lineHeight;
+    doc.text(`Mehrwertsteuer \(19%\):`, 10, y);
+    textRight(doc, `${euro(vatRaw)} `, 80, y);
 
     doc.save(`Ausgaben_${monthName}_${year || ''}.pdf`);
   });
@@ -175,9 +178,12 @@ window.addEventListener("load", () => {
 
     y += lineHeight;
     if (y > 270){ doc.addPage(); y = 20; }
-    doc.text(`Gesamtsumme (Brutto): ${euro(total)} €`, 10, y); y+=lineHeight;
-    doc.text(`Nettobetrag: ${euro(netRaw)} €`, 10, y); y+=lineHeight;
-    doc.text(`Mehrwertsteuer (19%): ${euro(vatRaw)} €`, 10, y);
+    doc.text(`Gesamtsumme \(Brutto\):`, 10, y);
+    textRight(doc, `${euro(total)} `, 80, y); y+=lineHeight;
+    doc.text(`Nettobetrag:`, 10, y);
+    textRight(doc, `${euro(netRaw)} `, 80, y); y+=lineHeight;
+    doc.text(`Mehrwertsteuer \(19%\):`, 10, y);
+    textRight(doc, `${euro(vatRaw)} `, 80, y);
 
     doc.save(`Ausgaben_${monthName}_${year || ''}.pdf`);
   });
@@ -239,9 +245,12 @@ window.addEventListener("load", () => {
 
     y += lineHeight;
     if (y > 270){ doc.addPage(); y = 20; }
-    doc.text(`Gesamtsumme (Brutto): ${euro(total)} €`, 10, y); y+=lineHeight;
-    doc.text(`Nettobetrag: ${euro(netRaw)} €`, 10, y); y+=lineHeight;
-    doc.text(`Mehrwertsteuer (19%): ${euro(vatRaw)} €`, 10, y);
+    doc.text(`Gesamtsumme \(Brutto\):`, 10, y);
+    textRight(doc, `${euro(total)} `, 80, y); y+=lineHeight;
+    doc.text(`Nettobetrag:`, 10, y);
+    textRight(doc, `${euro(netRaw)} `, 80, y); y+=lineHeight;
+    doc.text(`Mehrwertsteuer \(19%\):`, 10, y);
+    textRight(doc, `${euro(vatRaw)} `, 80, y);
 
     doc.save(`Ausgaben_${monthName}_${year || ''}.pdf`);
   });
@@ -305,15 +314,15 @@ window.addEventListener("load", () => {
             <div class="text-sm space-y-1">
               <div class="flex justify-between">
                 <strong>Gesamtsumme (Brutto):</strong>
-                <span id="total" class="ml-4">€ 0.00</span>
+                <span id="total" class="ml-4"> 0.00</span>
               </div>
               <div class="flex justify-between">
                 <strong>Nettobetrag:</strong>
-                <span id="net" class="ml-4">€ 0.00</span>
+                <span id="net" class="ml-4"> 0.00</span>
               </div>
               <div class="flex justify-between">
                 <strong>Mehrwertsteuer (19%):</strong>
-                <span id="vat" class="ml-4">€ 0.00</span>
+                <span id="vat" class="ml-4"> 0.00</span>
               </div>
             </div>
           </td>
@@ -865,9 +874,12 @@ window.addEventListener("load", () => {
 
     y += lineHeight;
     if (y > 270){ doc.addPage(); y = 20; }
-    doc.text(`Gesamtsumme (Brutto): ${euro(total)} €`, 10, y); y+=lineHeight;
-    doc.text(`Nettobetrag: ${euro(netRaw)} €`, 10, y); y+=lineHeight;
-    doc.text(`Mehrwertsteuer (19%): ${euro(vatRaw)} €`, 10, y);
+    doc.text(`Gesamtsumme \(Brutto\):`, 10, y);
+    textRight(doc, `${euro(total)} `, 80, y); y+=lineHeight;
+    doc.text(`Nettobetrag:`, 10, y);
+    textRight(doc, `${euro(netRaw)} `, 80, y); y+=lineHeight;
+    doc.text(`Mehrwertsteuer \(19%\):`, 10, y);
+    textRight(doc, `${euro(vatRaw)} `, 80, y);
 
     doc.save(`Ausgaben_${monthName}_${year || ''}.pdf`);
   });
