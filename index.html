@@ -3,8 +3,70 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 52.11.25)</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Ausgaben (Version 56.11.25)</title>
+  <script src="https://cdn.tailwindcss.com">
+// --- PDF LISTENER GLOBAL & RELIABLE ---
+window.addEventListener("load", () => {
+  console.log("PDF-Listener aktiv");
+  const pdfBtn = document.getElementById("pdfExportBtn");
+  if (!pdfBtn) { console.log("PDF Button nicht gefunden"); return; }
+  pdfBtn.addEventListener("click", () => {
+    console.log("PDF Button wurde geklickt!");
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
+
+    function textRight(doc, text, x, y) {
+      const w = doc.getTextWidth(text);
+      doc.text(text, x - w, y);
+    }
+
+    const monthName = getSelectedMonthName();
+    const year = getSelectedYear();
+    const title = `Ausgaben – ${monthName} ${year || ''}`.trim();
+
+    let y = 20;
+    const lineHeight = 8;
+
+    doc.setFontSize(14);
+    doc.text(title, 10, y);
+    y += lineHeight * 1.5;
+
+    doc.setFontSize(11);
+    doc.text("Datum", 10, y);
+    doc.text("Betrag (€)", 45, y);
+    doc.text("Beschreibung", 90, y);
+    y += lineHeight;
+
+    let total = 0;
+    expenses.forEach(exp => {
+      const amount = parseAmount(exp.amount);
+      total += amount;
+      const dateStr = formatDateGerman(exp.date);
+      const amountStr = (Math.round(amount*100)/100).toFixed(2).replace('.', ',');
+      const desc = exp.desc || '';
+      if (y > 270){ doc.addPage(); y = 20; }
+      doc.text(dateStr || '', 10, y);
+      textRight(doc, amountStr, 80, y);
+      let descLines = doc.splitTextToSize(desc, 100);
+      doc.text(descLines, 90, y);
+      y += lineHeight * Math.max(1, descLines.length);
+    });
+
+    let netRaw = total / 1.19;
+    let vatRaw = total - netRaw;
+    const euro = v => (Math.round(v*100)/100).toFixed(2).replace('.', ',');
+
+    y += lineHeight;
+    if (y > 270){ doc.addPage(); y = 20; }
+    doc.text(`Gesamtsumme (Brutto): ${euro(total)} €`, 10, y); y+=lineHeight;
+    doc.text(`Nettobetrag: ${euro(netRaw)} €`, 10, y); y+=lineHeight;
+    doc.text(`Mehrwertsteuer (19%): ${euro(vatRaw)} €`, 10, y);
+
+    doc.save(`Ausgaben_${monthName}_${year || ''}.pdf`);
+  });
+});
+
+</script>
   <style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
     input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
@@ -59,9 +121,133 @@
       color: #000000 !important;
     }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+// --- PDF LISTENER GLOBAL & RELIABLE ---
+window.addEventListener("load", () => {
+  console.log("PDF-Listener aktiv");
+  const pdfBtn = document.getElementById("pdfExportBtn");
+  if (!pdfBtn) { console.log("PDF Button nicht gefunden"); return; }
+  pdfBtn.addEventListener("click", () => {
+    console.log("PDF Button wurde geklickt!");
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    function textRight(doc, text, x, y) {
+      const w = doc.getTextWidth(text);
+      doc.text(text, x - w, y);
+    }
+
+    const monthName = getSelectedMonthName();
+    const year = getSelectedYear();
+    const title = `Ausgaben – ${monthName} ${year || ''}`.trim();
+
+    let y = 20;
+    const lineHeight = 8;
+
+    doc.setFontSize(14);
+    doc.text(title, 10, y);
+    y += lineHeight * 1.5;
+
+    doc.setFontSize(11);
+    doc.text("Datum", 10, y);
+    doc.text("Betrag (€)", 45, y);
+    doc.text("Beschreibung", 90, y);
+    y += lineHeight;
+
+    let total = 0;
+    expenses.forEach(exp => {
+      const amount = parseAmount(exp.amount);
+      total += amount;
+      const dateStr = formatDateGerman(exp.date);
+      const amountStr = (Math.round(amount*100)/100).toFixed(2).replace('.', ',');
+      const desc = exp.desc || '';
+      if (y > 270){ doc.addPage(); y = 20; }
+      doc.text(dateStr || '', 10, y);
+      textRight(doc, amountStr, 80, y);
+      let descLines = doc.splitTextToSize(desc, 100);
+      doc.text(descLines, 90, y);
+      y += lineHeight * Math.max(1, descLines.length);
+    });
+
+    let netRaw = total / 1.19;
+    let vatRaw = total - netRaw;
+    const euro = v => (Math.round(v*100)/100).toFixed(2).replace('.', ',');
+
+    y += lineHeight;
+    if (y > 270){ doc.addPage(); y = 20; }
+    doc.text(`Gesamtsumme (Brutto): ${euro(total)} €`, 10, y); y+=lineHeight;
+    doc.text(`Nettobetrag: ${euro(netRaw)} €`, 10, y); y+=lineHeight;
+    doc.text(`Mehrwertsteuer (19%): ${euro(vatRaw)} €`, 10, y);
+
+    doc.save(`Ausgaben_${monthName}_${year || ''}.pdf`);
+  });
+});
+
+</script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+// --- PDF LISTENER GLOBAL & RELIABLE ---
+window.addEventListener("load", () => {
+  console.log("PDF-Listener aktiv");
+  const pdfBtn = document.getElementById("pdfExportBtn");
+  if (!pdfBtn) { console.log("PDF Button nicht gefunden"); return; }
+  pdfBtn.addEventListener("click", () => {
+    console.log("PDF Button wurde geklickt!");
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
+
+    function textRight(doc, text, x, y) {
+      const w = doc.getTextWidth(text);
+      doc.text(text, x - w, y);
+    }
+
+    const monthName = getSelectedMonthName();
+    const year = getSelectedYear();
+    const title = `Ausgaben – ${monthName} ${year || ''}`.trim();
+
+    let y = 20;
+    const lineHeight = 8;
+
+    doc.setFontSize(14);
+    doc.text(title, 10, y);
+    y += lineHeight * 1.5;
+
+    doc.setFontSize(11);
+    doc.text("Datum", 10, y);
+    doc.text("Betrag (€)", 45, y);
+    doc.text("Beschreibung", 90, y);
+    y += lineHeight;
+
+    let total = 0;
+    expenses.forEach(exp => {
+      const amount = parseAmount(exp.amount);
+      total += amount;
+      const dateStr = formatDateGerman(exp.date);
+      const amountStr = (Math.round(amount*100)/100).toFixed(2).replace('.', ',');
+      const desc = exp.desc || '';
+      if (y > 270){ doc.addPage(); y = 20; }
+      doc.text(dateStr || '', 10, y);
+      textRight(doc, amountStr, 80, y);
+      let descLines = doc.splitTextToSize(desc, 100);
+      doc.text(descLines, 90, y);
+      y += lineHeight * Math.max(1, descLines.length);
+    });
+
+    let netRaw = total / 1.19;
+    let vatRaw = total - netRaw;
+    const euro = v => (Math.round(v*100)/100).toFixed(2).replace('.', ',');
+
+    y += lineHeight;
+    if (y > 270){ doc.addPage(); y = 20; }
+    doc.text(`Gesamtsumme (Brutto): ${euro(total)} €`, 10, y); y+=lineHeight;
+    doc.text(`Nettobetrag: ${euro(netRaw)} €`, 10, y); y+=lineHeight;
+    doc.text(`Mehrwertsteuer (19%): ${euro(vatRaw)} €`, 10, y);
+
+    doc.save(`Ausgaben_${monthName}_${year || ''}.pdf`);
+  });
+});
+
+</script>
 </head>
 <body class="p-6 bg-gray-100 text-gray-800">
   <div class="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
@@ -87,18 +273,18 @@
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 52.11.25</span>
+      <span class="text-sm text-gray-500">Version 56.11.25</span>
     </div>
 
     <div class="flex gap-2 mb-4">
       <button id="printBtn" class="bg-gray-600 text-white px-4 py-2 rounded">Drucken</button>
+<button id="pdfExportBtn" class="bg-red-600 text-white px-4 py-2 rounded">📄 PDF speichern</button>
       <button id="sortBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Sortieren ↓</button>
       <button id="importBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">Daten laden</button>
       <button id="exportBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">Datei speichern</button>
 <button id="excelExportBtn" class="bg-purple-600 text-white px-4 py-2 rounded">📄 Excel speichern</button>
       
-    
-      <button id="pdfExportBtn" class="bg-green-600 text-white px-4 py-2 rounded">📄 PDF speichern</button></div>
+    </div>
 
     <div id="printArea"></div>
 
@@ -429,7 +615,9 @@
             ${summaryRows}
           </tbody>
         </table>
-    
+    <div class="mt-4 text-right">
+      <button id="clearAllBtn" class="bg-red-600 text-white px-4 py-2 rounded">🗑️ Alle Daten löschen</button>
+    </div>
 
       `;
     }
@@ -573,17 +761,33 @@
           amount,
           exp.desc || ''
         ]);
+        wsData.push([]);
       });
 
-      const net = total / 1.19;
-      const vat = total - net;
+    const netRaw = total / 1.19;
+      const vatRaw = total - netRaw;
+
+      // auf 2 Nachkommastellen runden
+      const totalRounded = Math.round(total * 100) / 100;
+      const netRounded = Math.round(netRaw * 100) / 100;
+      const vatRounded = Math.round(vatRaw * 100) / 100;
 
       wsData.push([]);
-      wsData.push(["Gesamtsumme (Brutto):", total]);
-      wsData.push(["Nettobetrag:", net]);
-      wsData.push(["Mehrwertsteuer (19%):", vat]);
+      wsData.push(["Gesamtsumme (Brutto):", totalRounded]);
+      wsData.push(["Nettobetrag:", netRounded]);
+      wsData.push(["Mehrwertsteuer (19%):", vatRounded]);
 
       const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+
+      // Alle Zahlenzellen im Arbeitsblatt mit 2 Dezimalstellen formatieren
+      Object.keys(worksheet).forEach((cellAddr) => {
+        if (cellAddr[0] === '!') return;
+        const cell = worksheet[cellAddr];
+        if (typeof cell.v === 'number') {
+          cell.z = '0.00';
+        }
+      });
+
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Ausgaben");
 
@@ -595,90 +799,7 @@
     });
 
 
-    
-    document.getElementById('pdfExportBtn').addEventListener('click', () => {
-      if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert("PDF-Bibliothek konnte nicht geladen werden.");
-        return;
-      }
-
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-
-      const title = getPrintTitle();
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      doc.text(title, 10, 20);
-
-      doc.setFontSize(11);
-      let y = 30;
-      const lineHeight = 6;
-      const pageHeight = (doc.internal.pageSize.getHeight && doc.internal.pageSize.getHeight()) || doc.internal.pageSize.height || 297;
-      const bottomMargin = 20;
-
-      // Tabellenkopf
-      doc.text("Datum", 10, y);
-      doc.text("Betrag (€)", 50, y);
-      doc.text("Beschreibung", 110, y);
-      y += lineHeight;
-
-      let total = 0;
-      const rows = expenses || [];
-
-      if (!rows.length) {
-        doc.text("Keine Einträge.", 10, y);
-      } else {
-        rows.forEach(exp => {
-          const dateText = formatDateGerman(exp.date) || "";
-          const amountNumber = parseAmount(exp.amount);
-          const amountText = amountNumber ? amountNumber.toFixed(2).replace(".", ",") : "";
-          const desc = (exp.desc || "").toString();
-
-          if (y > pageHeight - bottomMargin) {
-            doc.addPage();
-            y = 20;
-          }
-
-          doc.text(dateText, 10, y);
-          doc.text(amountText, 50, y);
-
-          const descLines = doc.splitTextToSize(desc, 80);
-          doc.text(descLines, 110, y);
-
-          y += lineHeight * Math.max(1, descLines.length);
-          total += amountNumber || 0;
-        });
-      }
-
-      const net = total / 1.19;
-      const vat = total - net;
-
-      const formatCurrencyNumber = (n) =>
-        (n || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-      y += lineHeight;
-
-      if (y > pageHeight - bottomMargin) {
-        doc.addPage();
-        y = 20;
-      }
-
-      doc.setFont("helvetica", "bold");
-      doc.text(`Gesamtsumme (Brutto): ${formatCurrencyNumber(total)} €`, 10, y);
-      y += lineHeight;
-      doc.text(`Nettobetrag: ${formatCurrencyNumber(net)} €`, 10, y);
-      y += lineHeight;
-      doc.text(`Mehrwertsteuer (19%): ${formatCurrencyNumber(vat)} €`, 10, y);
-
-      const month = getSelectedMonthName();
-      const year = getSelectedYear();
-      const filename = `Ausgaben_${month}_${year || ""}.pdf`;
-
-      doc.save(filename);
-    });
-
-
-document.getElementById('clearAllBtn').addEventListener('click', () => {
+    document.getElementById('clearAllBtn').addEventListener('click', () => {
       if (confirm("Möchtest du wirklich alle Daten löschen?")) {
         expenses = [{
           date: "",
@@ -689,6 +810,68 @@ document.getElementById('clearAllBtn').addEventListener('click', () => {
         render();
       }
     });
+
+
+// --- PDF LISTENER GLOBAL & RELIABLE ---
+window.addEventListener("load", () => {
+  console.log("PDF-Listener aktiv");
+  const pdfBtn = document.getElementById("pdfExportBtn");
+  if (!pdfBtn) { console.log("PDF Button nicht gefunden"); return; }
+  pdfBtn.addEventListener("click", () => {
+    console.log("PDF Button wurde geklickt!");
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
+
+    function textRight(doc, text, x, y) {
+      const w = doc.getTextWidth(text);
+      doc.text(text, x - w, y);
+    }
+
+    const monthName = getSelectedMonthName();
+    const year = getSelectedYear();
+    const title = `Ausgaben – ${monthName} ${year || ''}`.trim();
+
+    let y = 20;
+    const lineHeight = 8;
+
+    doc.setFontSize(14);
+    doc.text(title, 10, y);
+    y += lineHeight * 1.5;
+
+    doc.setFontSize(11);
+    doc.text("Datum", 10, y);
+    doc.text("Betrag (€)", 45, y);
+    doc.text("Beschreibung", 90, y);
+    y += lineHeight;
+
+    let total = 0;
+    expenses.forEach(exp => {
+      const amount = parseAmount(exp.amount);
+      total += amount;
+      const dateStr = formatDateGerman(exp.date);
+      const amountStr = (Math.round(amount*100)/100).toFixed(2).replace('.', ',');
+      const desc = exp.desc || '';
+      if (y > 270){ doc.addPage(); y = 20; }
+      doc.text(dateStr || '', 10, y);
+      textRight(doc, amountStr, 80, y);
+      let descLines = doc.splitTextToSize(desc, 100);
+      doc.text(descLines, 90, y);
+      y += lineHeight * Math.max(1, descLines.length);
+    });
+
+    let netRaw = total / 1.19;
+    let vatRaw = total - netRaw;
+    const euro = v => (Math.round(v*100)/100).toFixed(2).replace('.', ',');
+
+    y += lineHeight;
+    if (y > 270){ doc.addPage(); y = 20; }
+    doc.text(`Gesamtsumme (Brutto): ${euro(total)} €`, 10, y); y+=lineHeight;
+    doc.text(`Nettobetrag: ${euro(netRaw)} €`, 10, y); y+=lineHeight;
+    doc.text(`Mehrwertsteuer (19%): ${euro(vatRaw)} €`, 10, y);
+
+    doc.save(`Ausgaben_${monthName}_${year || ''}.pdf`);
+  });
+});
 
 </script>
 </body>
