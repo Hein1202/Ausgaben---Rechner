@@ -3,73 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 66.11.25)</title>
-  <script src="https://cdn.tailwindcss.com">
-// --- PDF LISTENER GLOBAL & RELIABLE ---
-window.addEventListener("load", () => {
-  console.log("PDF-Listener aktiv");
-  const pdfBtn = document.getElementById("pdfExportBtn");
-  if (!pdfBtn) { console.log("PDF Button nicht gefunden"); return; }
-  pdfBtn.addEventListener("click", () => {
-    console.log("PDF Button wurde geklickt!");
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
-
-    function textRight(doc, text, x, y) {
-      const w = doc.getTextWidth(text);
-      doc.text(text, x - w, y);
-    }
-
-    const monthName = getSelectedMonthName();
-    const year = getSelectedYear();
-    const title = `Ausgaben – ${monthName} ${year || ''}`.trim();
-
-    let y = 20;
-    const lineHeight = 8;
-
-    doc.setFontSize(14);
-    doc.text(title, 10, y);
-    y += lineHeight * 1.5;
-
-    doc.setFontSize(11);
-    doc.text("Datum", 10, y);
-    doc.text("Betrag (€)", 45, y);
-    doc.text("Beschreibung", 90, y);
-    y += lineHeight;
-
-    let total = 0;
-    expenses.forEach(exp => {
-      const amount = parseAmount(exp.amount);
-      total += amount;
-      const dateStr = formatDateGerman(exp.date);
-      const amountStr = (Math.round(amount*100)/100).toFixed(2).replace('.', ',');
-      const desc = exp.desc || '';
-      if (y > 270){ doc.addPage(); y = 20; }
-      doc.text(dateStr || '', 10, y);
-      textRight(doc, amountStr, 80, y);
-      let descLines = doc.splitTextToSize(desc, 100);
-      doc.text(descLines, 90, y);
-      y += lineHeight * Math.max(1, descLines.length);
-    });
-
-    let netRaw = total / 1.19;
-    let vatRaw = total - netRaw;
-    const euro = v => (Math.round(v*100)/100).toFixed(2).replace('.', ',');
-
-    y += lineHeight;
-    if (y > 270){ doc.addPage(); y = 20; }
-    doc.text(`Gesamtsumme \(Brutto\):`, 10, y);
-    textRight(doc, `${euro(total)} `, 80, y); y+=lineHeight;
-    doc.text(`Nettobetrag:`, 10, y);
-    textRight(doc, `${euro(netRaw)} `, 80, y); y+=lineHeight;
-    doc.text(`Mehrwertsteuer \(19%\):`, 10, y);
-    textRight(doc, `${euro(vatRaw)} `, 80, y);
-
-    doc.save(`Ausgaben_${monthName}_${year || ''}.pdf`);
-  });
-});
-
-</script>
+  <title>Ausgaben (Version 67.11.25)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
     input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
@@ -124,139 +59,7 @@ window.addEventListener("load", () => {
       color: #000000 !important;
     }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
-// --- PDF LISTENER GLOBAL & RELIABLE ---
-window.addEventListener("load", () => {
-  console.log("PDF-Listener aktiv");
-  const pdfBtn = document.getElementById("pdfExportBtn");
-  if (!pdfBtn) { console.log("PDF Button nicht gefunden"); return; }
-  pdfBtn.addEventListener("click", () => {
-    console.log("PDF Button wurde geklickt!");
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
-
-    function textRight(doc, text, x, y) {
-      const w = doc.getTextWidth(text);
-      doc.text(text, x - w, y);
-    }
-
-    const monthName = getSelectedMonthName();
-    const year = getSelectedYear();
-    const title = `Ausgaben – ${monthName} ${year || ''}`.trim();
-
-    let y = 20;
-    const lineHeight = 8;
-
-    doc.setFontSize(14);
-    doc.text(title, 10, y);
-    y += lineHeight * 1.5;
-
-    doc.setFontSize(11);
-    doc.text("Datum", 10, y);
-    doc.text("Betrag (€)", 45, y);
-    doc.text("Beschreibung", 90, y);
-    y += lineHeight;
-
-    let total = 0;
-    expenses.forEach(exp => {
-      const amount = parseAmount(exp.amount);
-      total += amount;
-      const dateStr = formatDateGerman(exp.date);
-      const amountStr = (Math.round(amount*100)/100).toFixed(2).replace('.', ',');
-      const desc = exp.desc || '';
-      if (y > 270){ doc.addPage(); y = 20; }
-      doc.text(dateStr || '', 10, y);
-      textRight(doc, amountStr, 80, y);
-      let descLines = doc.splitTextToSize(desc, 100);
-      doc.text(descLines, 90, y);
-      y += lineHeight * Math.max(1, descLines.length);
-    });
-
-    let netRaw = total / 1.19;
-    let vatRaw = total - netRaw;
-    const euro = v => (Math.round(v*100)/100).toFixed(2).replace('.', ',');
-
-    y += lineHeight;
-    if (y > 270){ doc.addPage(); y = 20; }
-    doc.text(`Gesamtsumme \(Brutto\):`, 10, y);
-    textRight(doc, `${euro(total)} `, 80, y); y+=lineHeight;
-    doc.text(`Nettobetrag:`, 10, y);
-    textRight(doc, `${euro(netRaw)} `, 80, y); y+=lineHeight;
-    doc.text(`Mehrwertsteuer \(19%\):`, 10, y);
-    textRight(doc, `${euro(vatRaw)} `, 80, y);
-
-    doc.save(`Ausgaben_${monthName}_${year || ''}.pdf`);
-  });
-});
-
-</script>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
-// --- PDF LISTENER GLOBAL & RELIABLE ---
-window.addEventListener("load", () => {
-  console.log("PDF-Listener aktiv");
-  const pdfBtn = document.getElementById("pdfExportBtn");
-  if (!pdfBtn) { console.log("PDF Button nicht gefunden"); return; }
-  pdfBtn.addEventListener("click", () => {
-    console.log("PDF Button wurde geklickt!");
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
-
-    function textRight(doc, text, x, y) {
-      const w = doc.getTextWidth(text);
-      doc.text(text, x - w, y);
-    }
-
-    const monthName = getSelectedMonthName();
-    const year = getSelectedYear();
-    const title = `Ausgaben – ${monthName} ${year || ''}`.trim();
-
-    let y = 20;
-    const lineHeight = 8;
-
-    doc.setFontSize(14);
-    doc.text(title, 10, y);
-    y += lineHeight * 1.5;
-
-    doc.setFontSize(11);
-    doc.text("Datum", 10, y);
-    doc.text("Betrag (€)", 45, y);
-    doc.text("Beschreibung", 90, y);
-    y += lineHeight;
-
-    let total = 0;
-    expenses.forEach(exp => {
-      const amount = parseAmount(exp.amount);
-      total += amount;
-      const dateStr = formatDateGerman(exp.date);
-      const amountStr = (Math.round(amount*100)/100).toFixed(2).replace('.', ',');
-      const desc = exp.desc || '';
-      if (y > 270){ doc.addPage(); y = 20; }
-      doc.text(dateStr || '', 10, y);
-      textRight(doc, amountStr, 80, y);
-      let descLines = doc.splitTextToSize(desc, 100);
-      doc.text(descLines, 90, y);
-      y += lineHeight * Math.max(1, descLines.length);
-    });
-
-    let netRaw = total / 1.19;
-    let vatRaw = total - netRaw;
-    const euro = v => (Math.round(v*100)/100).toFixed(2).replace('.', ',');
-
-    y += lineHeight;
-    if (y > 270){ doc.addPage(); y = 20; }
-    doc.text(`Gesamtsumme \(Brutto\):`, 10, y);
-    textRight(doc, `${euro(total)} `, 80, y); y+=lineHeight;
-    doc.text(`Nettobetrag:`, 10, y);
-    textRight(doc, `${euro(netRaw)} `, 80, y); y+=lineHeight;
-    doc.text(`Mehrwertsteuer \(19%\):`, 10, y);
-    textRight(doc, `${euro(vatRaw)} `, 80, y);
-
-    doc.save(`Ausgaben_${monthName}_${year || ''}.pdf`);
-  });
-});
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body class="p-6 bg-gray-100 text-gray-800">
   <div class="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
@@ -282,12 +85,11 @@ window.addEventListener("load", () => {
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 66.11.25</span>
+      <span class="text-sm text-gray-500">Version 67.11.25</span>
     </div>
 
     <div class="flex gap-2 mb-4">
       <button id="printBtn" class="bg-gray-600 text-white px-4 py-2 rounded">Drucken</button>
-<button id="pdfExportBtn" class="bg-red-600 text-white px-4 py-2 rounded">📄 PDF speichern</button>
       <button id="sortBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Sortieren ↓</button>
       <button id="importBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">Daten laden</button>
       <button id="exportBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">Datei speichern</button>
@@ -864,73 +666,6 @@ const summaryRows = rows.length ? `
         save();
         render();
       }
-    });
-
-
-// --- PDF LISTENER GLOBAL & RELIABLE ---
-window.addEventListener("load", () => {
-  console.log("PDF-Listener aktiv");
-  const pdfBtn = document.getElementById("pdfExportBtn");
-  if (!pdfBtn) { console.log("PDF Button nicht gefunden"); return; }
-  pdfBtn.addEventListener("click", () => {
-    console.log("PDF Button wurde geklickt!");
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
-
-    function textRight(doc, text, x, y) {
-      const w = doc.getTextWidth(text);
-      doc.text(text, x - w, y);
-    }
-
-    const monthName = getSelectedMonthName();
-    const year = getSelectedYear();
-    const title = `Ausgaben – ${monthName} ${year || ''}`.trim();
-
-    let y = 20;
-    const lineHeight = 8;
-
-    doc.setFontSize(14);
-    doc.text(title, 10, y);
-    y += lineHeight * 1.5;
-
-    doc.setFontSize(11);
-    doc.text("Datum", 10, y);
-    doc.text("Betrag (€)", 45, y);
-    doc.text("Beschreibung", 90, y);
-    y += lineHeight;
-
-    let total = 0;
-    expenses.forEach(exp => {
-      const amount = parseAmount(exp.amount);
-      total += amount;
-      const dateStr = formatDateGerman(exp.date);
-      const amountStr = (Math.round(amount*100)/100).toFixed(2).replace('.', ',');
-      const desc = exp.desc || '';
-      if (y > 270){ doc.addPage(); y = 20; }
-      doc.text(dateStr || '', 10, y);
-      textRight(doc, amountStr, 80, y);
-      let descLines = doc.splitTextToSize(desc, 100);
-      doc.text(descLines, 90, y);
-      y += lineHeight * Math.max(1, descLines.length);
-    });
-
-    let netRaw = total / 1.19;
-    let vatRaw = total - netRaw;
-    const euro = v => (Math.round(v*100)/100).toFixed(2).replace('.', ',');
-
-    y += lineHeight;
-    if (y > 270){ doc.addPage(); y = 20; }
-    doc.text(`Gesamtsumme \(Brutto\):`, 10, y);
-    textRight(doc, `${euro(total)} `, 80, y); y+=lineHeight;
-    doc.text(`Nettobetrag:`, 10, y);
-    textRight(doc, `${euro(netRaw)} `, 80, y); y+=lineHeight;
-    doc.text(`Mehrwertsteuer \(19%\):`, 10, y);
-    textRight(doc, `${euro(vatRaw)} `, 80, y);
-
-    doc.save(`Ausgaben_${monthName}_${year || ''}.pdf`);
-  });
-});
-
-</script>
+    });</script>
 </body>
 </html>
