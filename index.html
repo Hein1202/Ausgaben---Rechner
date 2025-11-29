@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 64.11.25)</title>
+  <title>Ausgaben (Version 66.11.25)</title>
   <script src="https://cdn.tailwindcss.com">
 // --- PDF LISTENER GLOBAL & RELIABLE ---
 window.addEventListener("load", () => {
@@ -282,7 +282,7 @@ window.addEventListener("load", () => {
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 64.11.25</span>
+      <span class="text-sm text-gray-500">Version 66.11.25</span>
     </div>
 
     <div class="flex gap-2 mb-4">
@@ -366,16 +366,29 @@ window.addEventListener("load", () => {
       "12": "Dezember"
     };
 
+    function determineMonthFromExpenses() {
+      if (!Array.isArray(expenses) || expenses.length === 0) return;
+      for (const exp of expenses) {
+        if (!exp || !exp.date || typeof exp.date !== 'string') continue;
+        const parts = exp.date.split('-');
+        if (parts.length === 3) {
+          const y = parts[0];
+          const m = parts[1];
+          if (yearSelect) {
+            yearSelect.value = y;
+          }
+          if (monthSelect && monthSelect.querySelector(`option[value="${m}"]`)) {
+            monthSelect.value = m;
+          }
+          return;
+        }
+      }
+    }
+
     function initMonthSelector() {
       const now = new Date();
       const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
       const currentYear = now.getFullYear();
-
-      if (monthSelect) {
-        if (monthSelect.querySelector(`option[value="${currentMonth}"]`)) {
-          monthSelect.value = currentMonth;
-        }
-      }
 
       if (yearSelect) {
         yearSelect.innerHTML = '';
@@ -387,6 +400,15 @@ window.addEventListener("load", () => {
         }
         yearSelect.value = String(currentYear);
       }
+
+      if (monthSelect) {
+        if (monthSelect.querySelector(`option[value="${currentMonth}"]`)) {
+          monthSelect.value = currentMonth;
+        }
+      }
+
+      // Versuche, Monat/Jahr aus vorhandenen Einträgen zu übernehmen
+      determineMonthFromExpenses();
     }
 
     function save() {
@@ -429,26 +451,20 @@ window.addEventListener("load", () => {
 
 
     function getDateParts(iso) {
-      let year = '';
-      let month = '';
       let day = '';
       if (iso && typeof iso === 'string') {
         const parts = iso.split('-');
         if (parts.length === 3) {
-          year = parts[0];
-          month = parts[1];
           day = parts[2];
         }
       }
-      if (!year || !month) {
-        const now = new Date();
-        year = (yearSelect && yearSelect.value)
-          ? yearSelect.value
-          : String(now.getFullYear());
-        month = monthSelect && monthSelect.value
-          ? monthSelect.value
-          : String(now.getMonth() + 1).padStart(2, '0');
-      }
+      const now = new Date();
+      const year = (yearSelect && yearSelect.value)
+        ? yearSelect.value
+        : String(now.getFullYear());
+      const month = (monthSelect && monthSelect.value)
+        ? monthSelect.value
+        : String(now.getMonth() + 1).padStart(2, '0');
       return { year, month, day };
     }
 
@@ -674,6 +690,24 @@ const summaryRows = rows.length ? `
       }
     });
 
+    function handleMonthYearChange() {
+      // Beim Wechsel des Monats/Jahres immer mit einer frischen, leeren Zeile starten
+      expenses = [{
+        date: "",
+        amount: "",
+        desc: ""
+      }];
+      save();
+      render();
+    }
+
+    if (monthSelect) {
+      monthSelect.addEventListener('change', handleMonthYearChange);
+    }
+    if (yearSelect) {
+      yearSelect.addEventListener('change', handleMonthYearChange);
+    }
+
     document.getElementById('sortBtn').addEventListener('click', (e) => {
       sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
       expenses.sort((a, b) => {
@@ -696,7 +730,14 @@ const summaryRows = rows.length ? `
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'ausgaben_export.json';
+
+      // Dateiname anhand des ausgewählten Monats/Jahres erzeugen, z.B. "Ausgaben_Oktober_2025.json"
+      const monthName = getSelectedMonthName() || 'Unbekannter_Monat';
+      const year = getSelectedYear() || '';
+      const safeMonth = monthName.replace(/\s+/g, '_');
+      const filename = year ? `Ausgaben_${safeMonth}_${year}.json` : `Ausgaben_${safeMonth}.json`;
+
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
     });
@@ -718,6 +759,8 @@ const summaryRows = rows.length ? `
               amount: item.amount || '',
               desc: item.desc || item.description || ''
             }));
+            // Monat/Jahr anhand der geladenen Daten einstellen
+            determineMonthFromExpenses();
             save();
             render();
           } else {
