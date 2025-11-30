@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 67.11.25)</title>
+  <title>Ausgaben (Version 84.11.25)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
@@ -85,7 +85,7 @@
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 67.11.25</span>
+      <span class="text-sm text-gray-500">Version 84.11.25</span>
     </div>
 
     <div class="flex gap-2 mb-4">
@@ -102,6 +102,7 @@
     <table class="w-full border text-sm" id="expenseTable">
       <thead class="bg-gray-100">
         <tr>
+          <th class="p-2 border">Beleg</th>
           <th class="p-2 border">Datum</th>
           <th class="p-2 border">Betrag (€)</th>
           <th class="p-2 border">Beschreibung</th>
@@ -133,10 +134,10 @@
         </tr>
       </tfoot>
     </table>
+
     <div class="mt-4 text-right">
       <button id="clearAllBtn" class="bg-red-600 text-white px-4 py-2 rounded">🗑️ Alle Daten löschen</button>
     </div>
-
 
     <input type="file" id="importInput" accept=".json" style="display:none" />
   </div>
@@ -236,6 +237,56 @@
       return isNaN(n) ? 0 : n;
     }
 
+    function getNextReceiptNumber() {
+      let max = 0;
+      if (Array.isArray(expenses)) {
+        expenses.forEach(exp => {
+          if (!exp || exp.receipt === undefined || exp.receipt === null) return;
+          const n = parseInt(exp.receipt, 10);
+          if (!isNaN(n) && n > max) {
+            max = n;
+          }
+        });
+      }
+      return String(max + 1);
+    }
+
+    function autoAssignReceiptsIfMissing() {
+      if (!Array.isArray(expenses)) return;
+      // Nur für Zeilen ohne Belegnummer UND mit Datum (Tag) in aktueller Reihenfolge
+      let counter = 1;
+      expenses.forEach(exp => {
+        if (!exp) return;
+        const current = (exp.receipt || '').toString().trim();
+
+        // Datum prüfen: nur wenn ein Tag vorhanden ist (iso-Format YYYY-MM-DD erwartet)
+        const d = (exp.date || '').toString().trim();
+        let hasDay = false;
+        if (d) {
+          const parts = d.split('-');
+          if (parts.length === 3 && parts[2]) {
+            hasDay = true;
+          }
+        }
+
+        if (!hasDay) {
+          // Für Zeilen ohne Datum niemals eine Belegnummer vergeben
+          return;
+        }
+
+        if (!current) {
+          exp.receipt = String(counter++);
+        } else {
+          // Wenn bereits Nummern existieren, Zähler hinter die größte Nummer setzen
+          const n = parseInt(current, 10);
+          if (!isNaN(n) && n >= counter) {
+            counter = n + 1;
+          }
+        }
+      });
+    }
+
+
     function recalcTotals() {
       let total = 0;
 
@@ -292,6 +343,16 @@
         const monthYearLabel = parts.month && parts.year ? ` .${parts.month}.${parts.year}` : '';
 
         row.innerHTML = `
+          <td class="border p-1 w-20">
+            <input
+              type="text"
+              inputmode="numeric"
+              value="${exp.receipt || ''}"
+              class="w-full p-1 text-right bg-gray-50"
+              readonly
+              tabindex="-1"
+            />
+          </td>
           <td class="border p-1">
             <div class="flex items-center gap-1">
               <input
@@ -326,14 +387,7 @@
             />
           </td>
           <td class="border p-1 text-center">
-            <div class="flex justify-center gap-2">
-              <button
-                data-index="${index}"
-                class="insertBtn text-green-600"
-                title="Zeile darunter einfügen"
-              >
-                ➕
-              </button>
+            <div class="flex justify-center">
               <button
                 data-index="${index}"
                 class="deleteBtn text-red-600"
@@ -394,11 +448,13 @@
         const amountNumber = parseAmount(exp.amount);
         const amountFormatted = amountNumber ? (Math.round(amountNumber*100)/100).toFixed(2).replace('.', ',') : '';
         const desc = exp.desc || '';
+        const receipt = exp.receipt || '';
         rowsHtml += `
           <tr>
-            <td style="padding:4px;border:1px solid #ccc;">${date}</td>
-            <td style="padding:4px;border:1px solid #ccc;text-align:right;">${amountFormatted}</td>
-            <td style="padding:4px;border:1px solid #ccc;">${desc}</td>
+            <td style="padding:2px 4px;width:60px;text-align:right;">${receipt}</td>
+            <td style="padding:2px 4px;width:80px;">${date}</td>
+            <td style="padding:2px 8px;text-align:right;width:100px;">${amountFormatted}</td>
+            <td style="padding:2px 4px 2px 20px;">${desc}</td>
           </tr>
         `;
       });
@@ -414,41 +470,38 @@ const netPlain = netText.replace('€','').trim();
 const vatPlain = vatText.replace('€','').trim();
 const summaryRows = rows.length ? `
         <tr>
-          <td style="padding:4px;border:1px solid #ccc;font-weight:bold;">Gesamtsumme (Brutto gesamt):</td>
-          <td style="padding:4px;border:1px solid #ccc;text-align:right;">${totalPlain}</td>
-          <td style="padding:4px;border:1px solid #ccc;"></td>
+          <td colspan="2" style="padding:40px 4px 4px 4px;font-weight:bold;">Gesamtsumme (Brutto gesamt):</td>
+          <td style="padding:40px 4px 4px 4px;text-align:right;">${totalPlain}</td>
+          <td style="padding:40px 4px 4px 4px;"></td>
         </tr>
         <tr>
-          <td style="padding:4px;border:1px solid #ccc;font-weight:bold;">Nettobetrag (gesamt):</td>
-          <td style="padding:4px;border:1px solid #ccc;text-align:right;">${netPlain}</td>
-          <td style="padding:4px;border:1px solid #ccc;"></td>
+          <td colspan="2" style="padding:4px;font-weight:bold;">Nettobetrag (gesamt):</td>
+          <td style="padding:4px;text-align:right;">${netPlain}</td>
+          <td style="padding:4px;"></td>
         </tr>
         <tr>
-          <td style="padding:4px;border:1px solid #ccc;font-weight:bold;">Mehrwertsteuer (19 % gesamt):</td>
-          <td style="padding:4px;border:1px solid #ccc;text-align:right;">${vatPlain}</td>
-          <td style="padding:4px;border:1px solid #ccc;"></td>
+          <td colspan="2" style="padding:4px;font-weight:bold;">Mehrwertsteuer (19 % gesamt):</td>
+          <td style="padding:4px;text-align:right;">${vatPlain}</td>
+          <td style="padding:4px;"></td>
         </tr>
       ` : '';
 
       printArea.innerHTML = `
-        <h1 style="font-size:20px;font-weight:bold;margin-bottom:12px;">${title}</h1>
-        <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px;">
+        <h1 style="font-size:22px;font-weight:bold;margin-bottom:14px;">${title}</h1>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:14px;">
           <thead>
             <tr>
-              <th style="padding:4px;border:1px solid #ccc;text-align:left;">Datum</th>
-              <th style="padding:4px;border:1px solid #ccc;text-align:right;width:90px;">Betrag</th>
-              <th style="padding:4px;border:1px solid #ccc;text-align:left;">Beschreibung</th>
+              <th style="padding:4px;text-align:left;width:60px;">Beleg</th>
+              <th style="padding:4px;text-align:left;width:80px;">Datum</th>
+              <th style="padding:4px;text-align:right;width:100px;">Betrag</th>
+              <th style="padding:4px 4px 4px 20px;text-align:left;">Beschreibung</th>
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml || `<tr><td colspan="3" style="padding:4px;border:1px solid #ccc;font-style:italic;">Keine Einträge.</td></tr>`}
+            ${rowsHtml || `<tr><td colspan="4" style="padding:4px;font-style:italic;">Keine Einträge.</td></tr>`}
             ${summaryRows}
           </tbody>
         </table>
-    <div class="mt-4 text-right">
-      <button id="clearAllBtn" class="bg-red-600 text-white px-4 py-2 rounded">🗑️ Alle Daten löschen</button>
-    </div>
-
       `;
     }
 
@@ -456,9 +509,15 @@ const summaryRows = rows.length ? `
     expenseBody.addEventListener('change', (e) => {
       const index = e.target.dataset.index;
       const field = e.target.dataset.field;
+      if (field === 'receipt') {
+        return;
+      }
       if (index !== undefined && field) {
         if (field === 'date') {
           expenses[index].date = buildDateFromDay(e.target.value, expenses[index].date);
+          if (!expenses[index].receipt) {
+            expenses[index].receipt = getNextReceiptNumber();
+          }
           save();
           render();
         } else {
@@ -467,6 +526,52 @@ const summaryRows = rows.length ? `
           recalcTotals();
         }
       }
+    });
+
+    expenseBody.addEventListener('keydown', (e) => {
+      const input = e.target;
+      if (!input || input.tagName !== 'INPUT') return;
+      if (e.key !== 'Enter') return;
+
+      e.preventDefault();
+
+      const indexStr = input.dataset.index;
+      const field = input.dataset.field;
+      if (indexStr === undefined || !field) return;
+      const index = parseInt(indexStr, 10);
+      if (isNaN(index) || index < 0 || index >= expenses.length) return;
+
+      // Aktuellen Wert wie im change-Handler übernehmen
+      if (field === 'date') {
+        expenses[index].date = buildDateFromDay(input.value, expenses[index].date);
+      } else {
+        expenses[index][field] = input.value;
+      }
+
+      // Neue Zeile direkt darunter einfügen
+      const newEntry = {
+        date: "",
+        amount: "",
+        desc: "",
+        receipt: ""
+      };
+      expenses.splice(index + 1, 0, newEntry);
+      save();
+      render();
+
+      // Fokus in die entsprechende Spalte der neuen Zeile setzen
+      setTimeout(() => {
+        const rows = expenseBody.querySelectorAll('tr');
+        if (!rows || rows.length <= index + 1) return;
+        const newRow = rows[index + 1];
+        if (!newRow) return;
+
+        const target = newRow.querySelector('input[data-field="date"]');
+        if (target) {
+          target.focus();
+          target.select();
+        }
+      }, 0);
     });
 
     expenseBody.addEventListener('click', (e) => {
@@ -497,7 +602,8 @@ const summaryRows = rows.length ? `
       expenses = [{
         date: "",
         amount: "",
-        desc: ""
+        desc: "",
+        receipt: ""
       }];
       save();
       render();
@@ -559,8 +665,10 @@ const summaryRows = rows.length ? `
             expenses = imported.map(item => ({
               date: item.date || '',
               amount: item.amount || '',
-              desc: item.desc || item.description || ''
+              desc: item.desc || item.description || '',
+              receipt: item.receipt || item.beleg || ''
             }));
+            autoAssignReceiptsIfMissing();
             // Monat/Jahr anhand der geladenen Daten einstellen
             determineMonthFromExpenses();
             save();
@@ -588,7 +696,8 @@ const summaryRows = rows.length ? `
         expenses = [{
           date: "",
           amount: "",
-          desc: ""
+          desc: "",
+          receipt: ""
         }];
       }
       initMonthSelector();
@@ -606,7 +715,7 @@ const summaryRows = rows.length ? `
   
     document.getElementById('excelExportBtn').addEventListener('click', () => {
       const wsData = [
-        ["Datum", "Betrag (€)", "Beschreibung"]
+        ["Beleg", "Datum", "Betrag (€)", "Beschreibung"]
       ];
 
       let total = 0;
@@ -614,6 +723,7 @@ const summaryRows = rows.length ? `
         const amount = parseAmount(exp.amount);
         total += amount;
         wsData.push([
+          exp.receipt || '',
           formatDateGerman(exp.date),
           amount,
           exp.desc || ''
@@ -661,7 +771,8 @@ const summaryRows = rows.length ? `
         expenses = [{
           date: "",
           amount: "",
-          desc: ""
+          desc: "",
+          receipt: ""
         }];
         save();
         render();
