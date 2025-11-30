@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 85.11.25)</title>
+  <title>Ausgaben (Version 94.11.25</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
@@ -85,12 +85,12 @@
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 85.11.25</span>
+      <span class="text-sm text-gray-500">Version 94.11.25</span>
     </div>
 
     <div class="flex gap-2 mb-4">
       <button id="printBtn" class="bg-gray-600 text-white px-4 py-2 rounded">Drucken</button>
-      <button id="sortBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Sortieren ↓</button>
+      
       <button id="importBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">Daten laden</button>
       <button id="exportBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">Datei speichern</button>
 <button id="excelExportBtn" class="bg-purple-600 text-white px-4 py-2 rounded">📄 Excel speichern</button>
@@ -111,7 +111,12 @@
       </thead>
       <tbody id="expenseBody"></tbody>
       <tfoot>
-        <tr>
+        
+<tr id="enterHintRow" style="display:none;">
+  <td></td>
+  <td colspan="3" class="text-center text-gray-700 text-sm">Enter für neue Zeile – für mehrere Positionen im selben Beleg kein Datum angeben</td>
+</tr>
+<tr>
           <td class="border-t p-1"></td>
           <td class="border-t p-1 align-top">
             <div class="text-sm space-y-1">
@@ -135,6 +140,11 @@
       </tfoot>
     </table>
 
+    <div class="mt-1 flex justify-end">
+      <div id="enterHint" class="text-sm text-gray-600" style="display:none; width:60%; text-align:center;">
+        Enter für neue Zeile – für mehrere Positionen im selben Beleg kein Datum angeben
+      </div>
+    </div>
     <div class="mt-4 text-right">
       <button id="clearAllBtn" class="bg-red-600 text-white px-4 py-2 rounded">🗑️ Alle Daten löschen</button>
     </div>
@@ -577,6 +587,41 @@ const summaryRows = rows.length ? `
       }, 0);
     });
 
+    const enterHint = document.getElementById('enterHint');
+
+    function updateEnterHint(target) {
+      if (!enterHint) return;
+      if (target && target.tagName === 'INPUT' && target.dataset.field === 'desc') {
+        enterHint.style.display = 'block';
+      } else {
+        enterHint.style.display = 'none';
+      }
+    }
+
+    
+const enterHintRow=document.getElementById('enterHintRow');
+
+function updateEnterHintRow(target){
+  if(!enterHintRow) return;
+  if(target && target.tagName==='INPUT' && target.dataset.field==='desc'){
+    enterHintRow.style.display='';
+  } else {
+    enterHintRow.style.display='none';
+  }
+}
+
+expenseBody.addEventListener('focusin',(e)=>{updateEnterHintRow(e.target);});
+expenseBody.addEventListener('focusout',(e)=>{updateEnterHintRow(null);});
+
+expenseBody.addEventListener('focusin', (e) => {
+      updateEnterHint(e.target);
+    });
+
+    expenseBody.addEventListener('focusout', (e) => {
+      // Beim Verlassen des Eingabefeldes den Hinweis ausblenden
+      updateEnterHint(null);
+    });
+
     expenseBody.addEventListener('click', (e) => {
       const btn = e.target.closest('button');
       if (!btn) return;
@@ -619,7 +664,8 @@ const summaryRows = rows.length ? `
       yearSelect.addEventListener('change', handleMonthYearChange);
     }
 
-    document.getElementById('sortBtn').addEventListener('click', (e) => {
+    const sortBtn = document.getElementById('sortBtn');
+    if (sortBtn) sortBtn.addEventListener('click', (e) => {
       sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
       expenses.sort((a, b) => {
         return sortDirection === 'asc'
