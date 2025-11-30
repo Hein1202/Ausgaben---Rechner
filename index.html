@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 84.11.25)</title>
+  <title>Ausgaben (Version 85.11.25)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
@@ -85,7 +85,7 @@
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 84.11.25</span>
+      <span class="text-sm text-gray-500">Version 85.11.25</span>
     </div>
 
     <div class="flex gap-2 mb-4">
@@ -388,13 +388,16 @@
           </td>
           <td class="border p-1 text-center">
             <div class="flex justify-center">
-              <button
-                data-index="${index}"
-                class="deleteBtn text-red-600"
-                title="Zeile löschen"
-              >
-                🗑️
-              </button>
+              ${index === 0
+                ? ""
+                : `<button
+                    data-index="${index}"
+                    class="deleteBtn text-red-600"
+                    title="Zeile löschen"
+                  >
+                    🗑️
+                  </button>`
+              }
             </div>
           </td>
         `;
