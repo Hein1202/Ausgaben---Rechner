@@ -692,7 +692,13 @@ expenseBody.addEventListener('focusin', (e) => {
       const monthName = getSelectedMonthName() || 'Unbekannter_Monat';
       const year = getSelectedYear() || '';
       const safeMonth = monthName.replace(/\s+/g, '_');
-      const filename = year ? `Ausgaben_${safeMonth}_${year}.json` : `Ausgaben_${safeMonth}.json`;
+      const defaultFilename = year ? `Ausgaben_${safeMonth}_${year}.json` : `Ausgaben_${safeMonth}.json`;
+const userFilename = prompt("Dateiname für den Export eingeben:", defaultFilename);
+if (!userFilename) {
+  URL.revokeObjectURL(url);
+  return;
+}
+const filename = userFilename.endsWith('.json') ? userFilename : `${userFilename}.json`;
 
       a.download = filename;
       a.click();
