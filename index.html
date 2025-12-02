@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 96.11.25</title>
+  <title>Ausgaben (Version 97.11.25</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
@@ -82,10 +82,13 @@
         <option value="11">November</option>
         <option value="12">Dezember</option>
       </select>
+      
+<button id="lockIcon" class="text-xl px-2" title="Monat ist entsperrt – Klick zum Sperren">🔓</button>
+
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 96.11.25</span>
+      <span class="text-sm text-gray-500">Version 97.11.25</span>
     </div>
 
     <div class="flex gap-2 mb-4">
@@ -195,6 +198,57 @@ function loadAll() {
   } else {
     allExpenses = {};
   }
+}
+
+
+
+let lockedMonths = {};
+
+function loadLocks() {
+  const raw = localStorage.getItem('locked_months');
+  if (raw) {
+    try {
+      lockedMonths = JSON.parse(raw);
+    } catch {
+      lockedMonths = {};
+    }
+  }
+}
+
+function saveLocks() {
+  localStorage.setItem('locked_months', JSON.stringify(lockedMonths));
+}
+
+function isLocked(key) {
+  return lockedMonths[key] === true;
+}
+
+function toggleLock() {
+  if (!currentKey) return;
+  lockedMonths[currentKey] = !isLocked(currentKey);
+  saveLocks();
+  updateLockIcon();
+  updateEditability();
+}
+
+function updateLockIcon() {
+  const icon = document.getElementById('lockIcon');
+  if (!icon) return;
+  icon.textContent = isLocked(currentKey) ? '🔒' : '🔓';
+  icon.title = isLocked(currentKey) ? 'Monat ist gesperrt – Klick zum Entsperren' : 'Monat ist entsperrt – Klick zum Sperren';
+}
+
+function updateEditability() {
+  const locked = isLocked(currentKey);
+  document.querySelectorAll('#expenseTable input').forEach(input => {
+    input.readOnly = locked;
+    input.disabled = locked;
+  });
+  document.querySelectorAll('.deleteBtn').forEach(btn => {
+    btn.style.display = locked ? 'none' : '';
+  });
+  document.getElementById('importBtn').disabled = locked;
+  document.getElementById('clearAllBtn').disabled = locked;
 }
 
 
@@ -688,6 +742,8 @@ expenseBody.addEventListener('focusin', (e) => {
         receipt: ""
       }];
       render();
+      updateLockIcon();
+      updateEditability();
     }
 
     if (monthSelect) {
@@ -708,6 +764,8 @@ expenseBody.addEventListener('focusin', (e) => {
       e.target.textContent = 'Sortieren ' + (sortDirection === 'asc' ? '↑' : '↓');
       save();
       render();
+      updateLockIcon();
+      updateEditability();
     });
 
     document.getElementById('printBtn').addEventListener('click', () => {
@@ -801,6 +859,8 @@ expenseBody.addEventListener('focusin', (e) => {
         receipt: ""
       }];
       render();
+      updateLockIcon();
+      updateEditability();
     }
 
     window.onafterprint = () => {
@@ -810,7 +870,11 @@ expenseBody.addEventListener('focusin', (e) => {
     };
 
     // Start
+document.getElementById('lockIcon').addEventListener('click', toggleLock);
+    loadLocks();
     load();
+    updateLockIcon();
+    updateEditability();
   
     document.getElementById('excelExportBtn').addEventListener('click', () => {
       const wsData = [
