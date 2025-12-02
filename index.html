@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 95.11.25</title>
+  <title>Ausgaben (Version 96.11.25</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
@@ -85,7 +85,7 @@
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 95.11.25</span>
+      <span class="text-sm text-gray-500">Version 96.11.25</span>
     </div>
 
     <div class="flex gap-2 mb-4">
@@ -164,7 +164,41 @@
     const monthSelect = document.getElementById('monthSelect');
     const yearSelect = document.getElementById('yearSelect');
 
-    const MONTH_NAMES = {
+    
+let allExpenses = {};
+let currentKey = '';
+
+function getCurrentKey() {
+  const month = monthSelect?.value || '';
+  const year = yearSelect?.value || '';
+  return (month && year) ? `${year}-${month}` : '';
+}
+
+function saveAll() {
+  localStorage.setItem('all_expenses', JSON.stringify(allExpenses));
+}
+
+function saveCurrentMonth() {
+  if (!currentKey) return;
+  allExpenses[currentKey] = expenses;
+  saveAll();
+}
+
+function loadAll() {
+  const data = localStorage.getItem('all_expenses');
+  if (data) {
+    try {
+      allExpenses = JSON.parse(data);
+    } catch {
+      allExpenses = {};
+    }
+  } else {
+    allExpenses = {};
+  }
+}
+
+
+const MONTH_NAMES = {
       "01": "Januar",
       "02": "Februar",
       "03": "März",
@@ -225,7 +259,7 @@
     }
 
     function save() {
-      localStorage.setItem('expenses_data', JSON.stringify(expenses));
+      saveCurrentMonth();
     }
 
     function parseAmount(value) {
@@ -646,14 +680,13 @@ expenseBody.addEventListener('focusin', (e) => {
     });
 
     function handleMonthYearChange() {
-      // Beim Wechsel des Monats/Jahres immer mit einer frischen, leeren Zeile starten
-      expenses = [{
+      currentKey = getCurrentKey();
+      expenses = allExpenses[currentKey] || [{
         date: "",
         amount: "",
         desc: "",
         receipt: ""
       }];
-      save();
       render();
     }
 
@@ -683,27 +716,23 @@ expenseBody.addEventListener('focusin', (e) => {
     });
 
     document.getElementById('exportBtn').addEventListener('click', () => {
-      const blob = new Blob([JSON.stringify(expenses, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
+  const blob = new Blob([JSON.stringify(allExpenses, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
 
-      // Dateiname anhand des ausgewählten Monats/Jahres erzeugen, z.B. "Ausgaben_Oktober_2025.json"
-      const monthName = getSelectedMonthName() || 'Unbekannter_Monat';
-      const year = getSelectedYear() || '';
-      const safeMonth = monthName.replace(/\s+/g, '_');
-      const defaultFilename = year ? `Ausgaben_${safeMonth}_${year}.json` : `Ausgaben_${safeMonth}.json`;
-const userFilename = prompt("Dateiname für den Export eingeben:", defaultFilename);
-if (!userFilename) {
+  const defaultFilename = 'Ausgaben_Alle_Monate.json';
+  const userFilename = prompt("Dateiname für den Export eingeben:", defaultFilename);
+  if (!userFilename) {
+    URL.revokeObjectURL(url);
+    return;
+  }
+  const filename = userFilename.endsWith('.json') ? userFilename : `${userFilename}.json`;
+
+  a.download = filename;
+  a.click();
   URL.revokeObjectURL(url);
-  return;
-}
-const filename = userFilename.endsWith('.json') ? userFilename : `${userFilename}.json`;
-
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    });
+});
 
     document.getElementById('importBtn').addEventListener('click', () => {
       document.getElementById('importInput').click();
@@ -716,6 +745,25 @@ const filename = userFilename.endsWith('.json') ? userFilename : `${userFilename
       reader.onload = () => {
         try {
           const imported = JSON.parse(reader.result);
+          if (imported && typeof imported === 'object' && !Array.isArray(imported)) {
+            // Neue Struktur: mehrere Monate
+            Object.entries(imported).forEach(([key, list]) => {
+              if (Array.isArray(list)) {
+                allExpenses[key] = list;
+              }
+            });
+            saveAll();
+            currentKey = getCurrentKey();
+            expenses = allExpenses[currentKey] || [{
+              date: "",
+              amount: "",
+              desc: "",
+              receipt: ""
+            }];
+            render();
+            return;
+          }
+
           if (Array.isArray(imported)) {
             expenses = imported.map(item => ({
               date: item.date || '',
@@ -743,19 +791,15 @@ const filename = userFilename.endsWith('.json') ? userFilename : `${userFilename
     }
 
     function load() {
-      const data = localStorage.getItem('expenses_data');
-      if (data) {
-        expenses = JSON.parse(data);
-      }
-      if (!Array.isArray(expenses) || expenses.length === 0) {
-        expenses = [{
-          date: "",
-          amount: "",
-          desc: "",
-          receipt: ""
-        }];
-      }
+      loadAll();
       initMonthSelector();
+      currentKey = getCurrentKey();
+      expenses = allExpenses[currentKey] || [{
+        date: "",
+        amount: "",
+        desc: "",
+        receipt: ""
+      }];
       render();
     }
 
