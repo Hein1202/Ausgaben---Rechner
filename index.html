@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 98.12.25</title>
+  <title>Ausgaben (Version 103.12.25</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
@@ -88,7 +88,7 @@
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 98.12.25</span>
+      <span class="text-sm text-gray-500">Version 103.12.25</span>
     </div>
 
     <div class="flex gap-2 mb-4">
@@ -149,7 +149,7 @@
       </div>
     </div>
     <div class="mt-4 text-right">
-      <button id="clearAllBtn" class="bg-red-600 text-white px-4 py-2 rounded">🗑️ Alle Daten löschen</button>
+      <button id="clearAllBtn" class="bg-red-600 text-white px-4 py-2 rounded">🗑️ Diesen Monat löschen</button>
     </div>
 
     <input type="file" id="importInput" accept=".json" style="display:none" />
@@ -240,15 +240,27 @@ function updateLockIcon() {
 
 function updateEditability() {
   const locked = isLocked(currentKey);
+
   document.querySelectorAll('#expenseTable input').forEach(input => {
     input.readOnly = locked;
     input.disabled = locked;
   });
+
+  // Row delete buttons
   document.querySelectorAll('.deleteBtn').forEach(btn => {
     btn.style.display = locked ? 'none' : '';
   });
-  document.getElementById('importBtn').disabled = locked;
-  document.getElementById('clearAllBtn').disabled = locked;
+
+  // Import is blocked when locked
+  const importBtn = document.getElementById('importBtn');
+  if (importBtn) importBtn.disabled = locked;
+
+  // Hide the "Diesen Monat löschen" button completely when locked
+  const clearBtn = document.getElementById('clearAllBtn');
+  if (clearBtn) {
+    clearBtn.disabled = locked;
+    clearBtn.style.display = locked ? 'none' : '';
+  }
 }
 
 
@@ -438,7 +450,8 @@ const MONTH_NAMES = {
         const row = document.createElement('tr');
         const parts = getDateParts(exp.date);
         const day = parts.day ? String(parseInt(parts.day, 10)) : '';
-        const monthYearLabel = parts.month && parts.year ? ` .${parts.month}.${parts.year}` : '';
+        const monthYearLabel = (exp.hideDate && !day) ? '' : (parts.month && parts.year ? ` .${parts.month}.${parts.year}` : '');
+        const dateStyle = (exp.hideDate && !day) ? 'visibility:hidden' : '';
 
         row.innerHTML = `
           <td class="border p-1 w-20">
@@ -459,6 +472,7 @@ const MONTH_NAMES = {
                 value="${day}"
                 data-index="${index}"
                 data-field="date"
+                style="${dateStyle}"
                 class="w-16 p-1 text-right"
               />
               <span class="monthYear">${monthYearLabel}</span>
@@ -619,6 +633,8 @@ const summaryRows = rows.length ? `
           if (!expenses[index].receipt) {
             expenses[index].receipt = getNextReceiptNumber();
           }
+          // Datum wurde aktiv bearbeitet -> wieder einblenden
+          expenses[index].hideDate = false;
           save();
           render();
         } else {
@@ -645,8 +661,22 @@ const summaryRows = rows.length ? `
       // Aktuellen Wert wie im change-Handler übernehmen
       if (field === 'date') {
         expenses[index].date = buildDateFromDay(input.value, expenses[index].date);
+        if (!expenses[index].receipt && expenses[index].date) {
+          expenses[index].receipt = getNextReceiptNumber();
+        }
+        // Datum wurde aktiv bearbeitet -> wieder einblenden
+        expenses[index].hideDate = false;
       } else {
         expenses[index][field] = input.value;
+      }
+
+      // Wenn kein Tag/keine Belegnummer vorhanden ist, Datum in dieser Zeile ausblenden,
+      // sobald eine neue Zeile darunter erzeugt wird (Unterposition zum Beleg darüber).
+      const curParts = getDateParts(expenses[index].date);
+      const hasDay = !!curParts.day;
+      const hasReceipt = !!(expenses[index].receipt && String(expenses[index].receipt).trim());
+      if (!hasDay && !hasReceipt) {
+        expenses[index].hideDate = true;
       }
 
       // Neue Zeile direkt darunter einfügen
@@ -832,8 +862,22 @@ expenseBody.addEventListener('focusin', (e) => {
             autoAssignReceiptsIfMissing();
             // Monat/Jahr anhand der geladenen Daten einstellen
             determineMonthFromExpenses();
-            save();
+
+            // Wichtig: currentKey neu berechnen (nachdem Monat/Jahr gesetzt wurden),
+            // sonst wird in den falschen Monat gespeichert.
+            const importedKey = getCurrentKey();
+            if (importedKey) {
+              currentKey = importedKey;
+              allExpenses[currentKey] = expenses;
+              saveAll();
+            } else {
+              // Fallback: altes Verhalten
+              save();
+            }
+
             render();
+            updateLockIcon();
+            updateEditability();
           } else {
             alert("Ungültiges Format.");
           }
@@ -842,6 +886,8 @@ expenseBody.addEventListener('focusin', (e) => {
         }
       };
       reader.readAsText(file);
+      // Input zurücksetzen, damit derselbe Dateiname erneut importiert werden kann
+      e.target.value = '';
     });
 
     function formatEuro(value) {
