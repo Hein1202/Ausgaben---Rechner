@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 107.12.25)</title>
+  <title>Ausgaben (Version 117.12.25)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
@@ -82,13 +82,12 @@
         <option value="11">November</option>
         <option value="12">Dezember</option>
       </select>
-      
-<button id="lockIcon" class="text-xl px-2" title="Monat ist entsperrt – Klick zum Sperren">🔓</button>
+      <button id="lockIcon" class="text-xl px-2" title="Monat ist entsperrt – Klick zum Sperren">🔓</button>
 
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 107.12.25</span>
+      <span class="text-sm text-gray-500">Version 117.12.25</span>
     </div>
 
     <div class="flex gap-2 mb-4">
@@ -97,6 +96,15 @@
       <button id="importBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">Daten laden</button>
       <button id="exportBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">Datei speichern</button>
 <button id="excelExportBtn" class="bg-purple-600 text-white px-4 py-2 rounded">📄 Excel speichern</button>
+            <select id="quarterSelect" class="border rounded px-2 py-2 text-sm bg-white ml-4">
+        <option value="">(Quartal)</option>
+        <option value="1">Q1 (Jan–Mär)</option>
+        <option value="2">Q2 (Apr–Jun)</option>
+        <option value="3">Q3 (Jul–Sep)</option>
+        <option value="4">Q4 (Okt–Dez)</option>
+      </select>
+<button id="quarterPrintBtn" class="bg-gray-800 text-white px-4 py-2 rounded">🖨️ Quartal drucken</button>
+      <button id="quarterExcelBtn" class="bg-purple-800 text-white px-4 py-2 rounded">📄 Quartal Excel</button>
       
     </div>
 
@@ -165,6 +173,7 @@
     const vatDisplay = document.getElementById('vat');
     const printArea = document.getElementById('printArea');
     const monthSelect = document.getElementById('monthSelect');
+    const quarterSelect = document.getElementById('quarterSelect');
     const yearSelect = document.getElementById('yearSelect');
 
     
@@ -318,6 +327,12 @@ const MONTH_NAMES = {
         if (monthSelect.querySelector(`option[value="${currentMonth}"]`)) {
           monthSelect.value = currentMonth;
         }
+      }
+
+      // Quartal (nur als Komfort, wird nur gesetzt wenn noch leer)
+      if (quarterSelect && !quarterSelect.value && monthSelect && monthSelect.value) {
+        const m = parseInt(monthSelect.value, 10);
+        if (m && !isNaN(m)) quarterSelect.value = String(Math.ceil(m / 3));
       }
 
       // Versuche, Monat/Jahr aus vorhandenen Einträgen zu übernehmen
@@ -556,7 +571,66 @@ function render() {
       return val;
     }
 
-    function getPrintTitle() {
+    
+    // --- Quarter helpers (Q1..Q4) ---
+    function getSelectedQuarter() {
+      const qRaw = quarterSelect?.value || '';
+      const q = parseInt(qRaw, 10);
+      if (q && !isNaN(q)) return q;
+
+      const m = parseInt(monthSelect?.value || '', 10);
+      if (!m || isNaN(m)) return null;
+      return Math.ceil(m / 3);
+    }
+
+    function getQuarterMonths(q) {
+      const start = (q - 1) * 3 + 1;
+      return [0, 1, 2].map(i => String(start + i).padStart(2, '0'));
+    }
+
+    function getQuarterTitle() {
+      const q = getSelectedQuarter();
+      const year = getSelectedYear();
+      if (q && year) return `Ausgaben – Q${q} ${year}`;
+      if (year) return `Ausgaben – ${year}`;
+      return 'Ausgaben – Quartal';
+    }
+
+    function getQuarterRows() {
+      const q = getSelectedQuarter();
+      const year = getSelectedYear();
+      if (!q || !year) return { q: null, year: null, months: [], rows: [] };
+
+      const months = getQuarterMonths(q);
+      const rows = [];
+
+      months.forEach(mm => {
+        const key = `${year}-${mm}`;
+        const list = allExpenses[key];
+
+        // Monatsüberschrift
+        rows.push({ __monthHeader: true, month: mm, year });
+
+        if (Array.isArray(list)) {
+          list.forEach(exp => {
+            if (!exp) return;
+            const date = String(exp.date ?? '').trim();
+            const amount = String(exp.amount ?? '').trim();
+            const desc = String(exp.desc ?? '').trim();
+            const receipt = String(exp.receipt ?? '').trim();
+            if (!(date || amount || desc || receipt)) return; // komplett leere Zeilen ignorieren
+            rows.push(exp);
+          });
+        }
+      });
+
+      // Falls am Ende nur Überschriften hängen geblieben sind
+      while (rows.length && rows[rows.length - 1].__monthHeader) rows.pop();
+
+      return { q, year, months, rows };
+    }
+
+function getPrintTitle() {
       const monthName = getSelectedMonthName();
       const year = getSelectedYear();
       if (monthName && year) return `Ausgaben – ${monthName} ${year}`;
@@ -634,6 +708,88 @@ const summaryRows = rows.length ? `
         </table>
       `;
     }
+
+    function buildQuarterPrintArea() {
+      if (!printArea) return;
+
+      const info = getQuarterRows();
+      const title = getQuarterTitle();
+
+      let rowsHtml = '';
+      let total = 0;
+
+      (info.rows || []).forEach(exp => {
+        if (exp && exp.__monthHeader) {
+          const monthName = MONTH_NAMES[exp.month] || exp.month;
+          rowsHtml += `
+            <tr>
+              <td colspan="4" style="padding:14px 4px 6px 4px;font-weight:bold;">${escHtml(monthName)} ${escHtml(exp.year)}</td>
+            </tr>
+          `;
+          return;
+        }
+
+        const date = escHtml(formatDateGerman(exp.date));
+        const amountNumber = parseAmount(exp.amount);
+        total += amountNumber;
+        const amountFormatted = amountNumber ? (Math.round(amountNumber * 100) / 100).toFixed(2).replace('.', ',') : '';
+        const desc = escHtml(exp.desc || '');
+        const receipt = escHtml(exp.receipt || '');
+
+        rowsHtml += `
+          <tr>
+            <td style="padding:2px 4px;width:60px;text-align:right;">${receipt}</td>
+            <td style="padding:2px 4px;width:90px;">${date}</td>
+            <td style="padding:2px 8px;text-align:right;width:110px;">${amountFormatted}</td>
+            <td style="padding:2px 4px 2px 20px;">${desc}</td>
+          </tr>
+        `;
+      });
+
+      const net = total / 1.19;
+      const vat = total - net;
+
+      const totalPlain = (Math.round(total * 100) / 100).toFixed(2).replace('.', ',');
+      const netPlain = (Math.round(net * 100) / 100).toFixed(2).replace('.', ',');
+      const vatPlain = (Math.round(vat * 100) / 100).toFixed(2).replace('.', ',');
+
+      const summaryRows = (info.rows || []).length ? `
+        <tr>
+          <td colspan="2" style="padding:40px 4px 4px 4px;font-weight:bold;">Gesamtsumme (Brutto gesamt):</td>
+          <td style="padding:40px 4px 4px 4px;text-align:right;">${totalPlain}</td>
+          <td style="padding:40px 4px 4px 4px;"></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="padding:4px;font-weight:bold;">Nettobetrag (gesamt):</td>
+          <td style="padding:4px;text-align:right;">${netPlain}</td>
+          <td style="padding:4px;"></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="padding:4px;font-weight:bold;">Mehrwertsteuer (19 % gesamt):</td>
+          <td style="padding:4px;text-align:right;">${vatPlain}</td>
+          <td style="padding:4px;"></td>
+        </tr>
+      ` : '';
+
+      printArea.innerHTML = `
+        <h1 style="font-size:22px;font-weight:bold;margin-bottom:14px;">${title}</h1>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:14px;">
+          <thead>
+            <tr>
+              <th style="padding:4px;text-align:left;width:60px;">Beleg</th>
+              <th style="padding:4px;text-align:left;width:90px;">Datum</th>
+              <th style="padding:4px;text-align:right;width:110px;">Betrag</th>
+              <th style="padding:4px 4px 4px 20px;text-align:left;">Beschreibung</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml || `<tr><td colspan="4" style="padding:4px;font-style:italic;">Keine Einträge.</td></tr>`}
+            ${summaryRows}
+          </tbody>
+        </table>
+      `;
+    }
+
 
 
     expenseBody.addEventListener('change', (e) => {
@@ -767,14 +923,66 @@ expenseBody.addEventListener('focusin', (e) => {
       }
     });
 
-    function handleMonthYearChange() {
+    
+    // Default month template: first row prefilled with "Raummiete"
+    function getDefaultEmptyMonth() {
+      // Tag 1 vorbelegen (Monat/Jahr kommen aus der Auswahl)
+      const month = monthSelect?.value || '';
+      const year = yearSelect?.value || '';
+      const rentDate = (month && year) ? `${year}-${month}-01` : '';
+
+      return [
+        {
+          date: rentDate,
+          amount: "",
+          desc: "Raummiete",
+          receipt: "1",   // Beleg 1 für Raummiete reserviert
+          hideDate: false
+        },
+        {
+          date: "",
+          amount: "",
+          desc: "",
+          receipt: "",
+          hideDate: false
+        }
+      ];
+    }
+
+
+    function monthHasMeaningfulData(list) {
+      if (!Array.isArray(list)) return false;
+      return list.some(e => {
+        if (!e) return false;
+        const date = String(e.date ?? '').trim();
+        const amount = String(e.amount ?? '').trim();
+        const desc = String(e.desc ?? '').trim();
+        const receipt = String(e.receipt ?? '').trim();
+        // Wenn wirklich ALLES leer ist -> keine Daten
+        return !!(date || amount || desc || receipt);
+      });
+    }
+
+    function getMonthExpensesOrDefault(key) {
+      const list = allExpenses[key];
+      if (!Array.isArray(list) || list.length === 0 || !monthHasMeaningfulData(list)) {
+        const def = getDefaultEmptyMonth();
+        // direkt in allExpenses schreiben, damit es beim nächsten Öffnen bleibt
+        allExpenses[key] = def;
+        saveAll();
+        return def;
+      }
+      return list;
+    }
+
+function handleMonthYearChange() {
+      // Quartal automatisch nach Monat setzen, solange der Nutzer kein Quartal gewählt hat
+      if (quarterSelect && !quarterSelect.value && monthSelect && monthSelect.value) {
+        const m = parseInt(monthSelect.value, 10);
+        if (m && !isNaN(m)) quarterSelect.value = String(Math.ceil(m / 3));
+      }
       currentKey = getCurrentKey();
-      expenses = allExpenses[currentKey] || [{
-        date: "",
-        amount: "",
-        desc: "",
-        receipt: ""
-      }];
+      expenses = getMonthExpensesOrDefault(currentKey);
       render();
       updateLockIcon();
       updateEditability();
@@ -837,12 +1045,7 @@ expenseBody.addEventListener('focusin', (e) => {
             });
             saveAll();
             currentKey = getCurrentKey();
-            expenses = allExpenses[currentKey] || [{
-              date: "",
-              amount: "",
-              desc: "",
-              receipt: ""
-            }];
+            expenses = getMonthExpensesOrDefault(currentKey);
             render();
             return;
           }
@@ -893,12 +1096,7 @@ expenseBody.addEventListener('focusin', (e) => {
       loadAll();
       initMonthSelector();
       currentKey = getCurrentKey();
-      expenses = allExpenses[currentKey] || [{
-        date: "",
-        amount: "",
-        desc: "",
-        receipt: ""
-      }];
+      expenses = getMonthExpensesOrDefault(currentKey);
       render();
       updateLockIcon();
       updateEditability();
@@ -987,6 +1185,86 @@ document.getElementById('lockIcon').addEventListener('click', toggleLock);
       const year = getSelectedYear();
       XLSX.writeFile(wb, `Ausgaben_${month}_${year}.xlsx`);
     });
+
+    document.getElementById('quarterExcelBtn').addEventListener('click', () => {
+      const info = getQuarterRows();
+      if (!info.q || !info.year) {
+        alert('Bitte Quartal und Jahr auswählen (oder Monat+Jahr).');
+        return;
+      }
+
+      const wsData = [
+        ["Beleg", "Datum", "Betrag (€)", "Beschreibung"]
+      ];
+
+      let total = 0;
+
+      (info.rows || []).forEach(exp => {
+        if (exp && exp.__monthHeader) {
+          const monthName = MONTH_NAMES[exp.month] || exp.month;
+          wsData.push(["", "", "", `${monthName} ${exp.year}`]);
+          return;
+        }
+
+        const amount = parseAmount(exp.amount);
+        total += amount;
+
+        let excelDate = "";
+        if (exp.date && typeof exp.date === "string") {
+          const parts = exp.date.split("-");
+          if (parts.length === 3) {
+            const y = parseInt(parts[0], 10);
+            const mo = parseInt(parts[1], 10);
+            const d = parseInt(parts[2], 10);
+            if (!isNaN(y) && !isNaN(mo) && !isNaN(d)) {
+              excelDate = new Date(y, mo - 1, d);
+            }
+          }
+        }
+
+        wsData.push([
+          exp.receipt || "",
+          excelDate,
+          amount,
+          exp.desc || ""
+        ]);
+      });
+
+      const net = total / 1.19;
+      const vat = total - net;
+
+      wsData.push([]);
+      wsData.push(["Gesamtsumme (Brutto):", "", total, ""]);
+      wsData.push(["Nettobetrag:", "", net, ""]);
+      wsData.push(["Mehrwertsteuer (19%):", "", vat, ""]);
+
+      const worksheet = XLSX.utils.aoa_to_sheet(wsData, { cellDates: true });
+
+      Object.keys(worksheet).forEach(addr => {
+        if (addr[0] === "!") return;
+        const cell = worksheet[addr];
+        if (!cell) return;
+
+        if (cell.t === "d" || cell.v instanceof Date) {
+          cell.t = "d";
+          cell.z = "DD.MM.YYYY";
+          return;
+        }
+        if (typeof cell.v === "number") {
+          cell.z = '#,##0.00 [$€-de-DE]';
+        }
+      });
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, worksheet, `Ausgaben_Q${info.q}`);
+      XLSX.writeFile(wb, `Ausgaben_Q${info.q}_${info.year}.xlsx`);
+    });
+
+    document.getElementById('quarterPrintBtn').addEventListener('click', () => {
+      buildQuarterPrintArea();
+      window.print();
+    });
+
 
 
     document.getElementById('clearAllBtn').addEventListener('click', () => {
