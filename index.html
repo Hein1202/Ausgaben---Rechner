@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 120.12.25)</title>
+  <title>Ausgaben (Version 122.12.25)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
@@ -87,7 +87,7 @@
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 120.12.25</span>
+      <span class="text-sm text-gray-500">Version 122.12.25</span>
     </div>
 
     <div class="flex gap-2 mb-4">
@@ -675,6 +675,10 @@ function formatDateGerman(iso) {
       return { q, year, months, rows };
     }
 
+    // Print headline (only used in Ausdruck)
+    const PRINT_MAIN_TITLE = "Betriebliche Ausgaben – privat verauslagt (EÜR)";
+    const EXCEL_MAIN_TITLE = PRINT_MAIN_TITLE;
+
 function getPrintTitle() {
       const monthName = getSelectedMonthName();
       const year = getSelectedYear();
@@ -741,7 +745,8 @@ const summaryRows = rows.length ? `
       ` : '';
 
       printArea.innerHTML = `
-        <h1 style="font-size:22px;font-weight:bold;margin-bottom:14px;">${title}</h1>
+        <h1 style="font-size:22px;font-weight:bold;margin-bottom:6px;">${PRINT_MAIN_TITLE}</h1>
+        <div style="font-size:18px;font-weight:bold;margin-bottom:14px;">${title}</div>
         <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:14px;">
           <thead>
             <tr>
@@ -822,7 +827,8 @@ const summaryRows = rows.length ? `
       ` : '';
 
       printArea.innerHTML = `
-        <h1 style="font-size:22px;font-weight:bold;margin-bottom:14px;">${title}</h1>
+        <h1 style="font-size:22px;font-weight:bold;margin-bottom:6px;">${PRINT_MAIN_TITLE}</h1>
+        <div style="font-size:18px;font-weight:bold;margin-bottom:14px;">${title}</div>
         <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:14px;">
           <thead>
             <tr>
@@ -1295,7 +1301,12 @@ document.getElementById('lockIcon').addEventListener('click', toggleLock);
     updateEditability();
   
     document.getElementById('excelExportBtn').addEventListener('click', () => {
+      const month = getSelectedMonthName();
+      const year = getSelectedYear();
       const wsData = [
+        [EXCEL_MAIN_TITLE],
+        [`${month} ${year}`],
+        [],
         ["Beleg", "Datum", "Betrag (€)", "Beschreibung"]
       ];
 
@@ -1367,9 +1378,6 @@ document.getElementById('lockIcon').addEventListener('click', toggleLock);
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, worksheet, "Ausgaben");
-
-      const month = getSelectedMonthName();
-      const year = getSelectedYear();
       XLSX.writeFile(wb, `Ausgaben_${month}_${year}.xlsx`);
     });
 
@@ -1381,6 +1389,9 @@ document.getElementById('lockIcon').addEventListener('click', toggleLock);
       }
 
       const wsData = [
+        [EXCEL_MAIN_TITLE],
+        [`Q${info.q} ${info.year}`],
+        [],
         ["Beleg", "Datum", "Betrag (€)", "Beschreibung"]
       ];
 
