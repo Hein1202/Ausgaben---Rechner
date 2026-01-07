@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 122.12.25)</title>
+  <title>Ausgaben (Version 124.12.25)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
@@ -58,6 +58,11 @@
       font-weight: 700 !important;
       color: #000000 !important;
     }
+
+    /* Advanced controls are hidden until code 1202 is entered */
+    .advanced-only { display: none; }
+    body.advanced-unlocked .advanced-only { display: inline-flex; }
+    body.advanced-unlocked select.advanced-only { display: inline-block; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -82,29 +87,37 @@
         <option value="11">November</option>
         <option value="12">Dezember</option>
       </select>
-      <button id="lockIcon" class="text-xl px-2" title="Monat ist entsperrt – Klick zum Sperren">🔓</button>
+      <button id="lockIcon" class="text-xl px-2 advanced-only" title="Monat ist entsperrt – Klick zum Sperren">🔓</button>
 
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 122.12.25</span>
+      <span class="text-sm text-gray-500">Version 124.12.25</span>
     </div>
 
-    <div class="flex gap-2 mb-4">
+    <div class="flex flex-wrap items-center gap-2 mb-4">
       <button id="printBtn" class="bg-gray-600 text-white px-4 py-2 rounded">Drucken</button>
       
-      <button id="importBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">Daten laden</button>
+      <button id="importBtn" class="bg-yellow-500 text-white px-4 py-2 rounded advanced-only">Daten laden</button>
       <button id="exportBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">Datei speichern</button>
-<button id="excelExportBtn" class="bg-purple-600 text-white px-4 py-2 rounded">📄 Excel speichern</button>
-            <select id="quarterSelect" class="border rounded px-2 py-2 text-sm bg-white ml-4">
+
+      <div id="advancedUnlockBox" class="flex items-center gap-2 ml-2">
+        <span class="text-xs text-gray-600">Code:</span>
+        <input id="advancedCodeInput" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8"
+               class="border rounded px-2 py-2 text-sm w-24" placeholder="1202" />
+        <span id="advancedStatus" class="text-xs text-green-700" style="display:none;">✔</span>
+        <button id="advancedLockBtn" class="advanced-only bg-gray-200 text-gray-800 px-3 py-2 rounded">Sperren</button>
+      </div>
+<button id="excelExportBtn" class="bg-purple-600 text-white px-4 py-2 rounded advanced-only">📄 Excel speichern</button>
+            <select id="quarterSelect" class="border rounded px-2 py-2 text-sm bg-white ml-4 advanced-only">
         <option value="">(Quartal)</option>
         <option value="1">Q1 (Jan–Mär)</option>
         <option value="2">Q2 (Apr–Jun)</option>
         <option value="3">Q3 (Jul–Sep)</option>
         <option value="4">Q4 (Okt–Dez)</option>
       </select>
-<button id="quarterPrintBtn" class="bg-gray-800 text-white px-4 py-2 rounded">🖨️ Quartal drucken</button>
-      <button id="quarterExcelBtn" class="bg-purple-800 text-white px-4 py-2 rounded">📄 Quartal Excel</button>
+<button id="quarterPrintBtn" class="bg-gray-800 text-white px-4 py-2 rounded advanced-only">🖨️ Quartal drucken</button>
+      <button id="quarterExcelBtn" class="bg-purple-800 text-white px-4 py-2 rounded advanced-only">📄 Quartal Excel</button>
       
     </div>
 
@@ -157,7 +170,7 @@
       </div>
     </div>
     <div class="mt-4 text-right">
-      <button id="clearAllBtn" class="bg-red-600 text-white px-4 py-2 rounded">🗑️ Diesen Monat löschen</button>
+      <button id="clearAllBtn" class="bg-red-600 text-white px-4 py-2 rounded advanced-only">🗑️ Diesen Monat löschen</button>
     </div>
 
     <input type="file" id="importInput" accept=".json" style="display:none" />
@@ -175,6 +188,43 @@
     const monthSelect = document.getElementById('monthSelect');
     const quarterSelect = document.getElementById('quarterSelect');
     const yearSelect = document.getElementById('yearSelect');
+
+    // --- Advanced controls (unlock with code 1202) ---
+    const advancedCodeInput = document.getElementById('advancedCodeInput');
+    const advancedStatus = document.getElementById('advancedStatus');
+    const advancedLockBtn = document.getElementById('advancedLockBtn');
+
+    function setAdvancedUnlocked(isUnlocked) {
+      document.body.classList.toggle('advanced-unlocked', !!isUnlocked);
+      if (advancedStatus) advancedStatus.style.display = isUnlocked ? 'inline' : 'none';
+    }
+
+    // Default: locked (only "Drucken" + "Datei speichern" visible)
+    setAdvancedUnlocked(false);
+
+    function tryUnlockAdvanced() {
+      const val = String(advancedCodeInput?.value || '').trim();
+      if (val === '1202') {
+        setAdvancedUnlocked(true);
+        if (advancedCodeInput) advancedCodeInput.value = '';
+      }
+    }
+
+    if (advancedCodeInput) {
+      advancedCodeInput.addEventListener('input', tryUnlockAdvanced);
+      advancedCodeInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          tryUnlockAdvanced();
+        }
+      });
+    }
+
+    if (advancedLockBtn) {
+      advancedLockBtn.addEventListener('click', () => setAdvancedUnlocked(false));
+    }
+
+
 
     
 let allExpenses = {};
