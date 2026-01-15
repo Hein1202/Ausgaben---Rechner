@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 126.12.25)</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
+  <title>Ausgaben (Version 135.12.25)</title>
+<style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
     input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
 
@@ -65,6 +64,8 @@
     body.advanced-unlocked select.advanced-only { display: inline-block; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="tailwind.css">
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="p-6 bg-gray-100 text-gray-800">
   <div class="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
@@ -92,7 +93,7 @@
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 126.12.25</span>
+      <span class="text-sm text-gray-500">Version 135.12.25</span>
     </div>
 
     <div class="flex flex-wrap items-center gap-2 mb-4">
@@ -391,6 +392,223 @@ const MONTH_NAMES = {
       if (typeof value !== 'string') {
         value = String(value ?? '');
       }
+
+    // --- Offline fallback: CSV export for Excel (if XLSX library is not available) ---
+    function csvEscape(v) {
+      const s = String(v ?? "");
+      if (/[;"\n\r]/.test(s) || s.includes('"')) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    }
+
+    function downloadTextFile(filename, content, mime) {
+      const blob = new Blob([content], { type: mime || "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    function exportMonthCSV() {
+      const month = getSelectedMonthName();
+      const year = getSelectedYear();
+      const rows = (expenses || []).filter(exp => exp && !isHiddenRentRow(exp));
+
+      let total = 0;
+      const lines = [];
+      lines.push("sep=;");
+
+      // Title rows (A..D)
+      lines.push([EXCEL_MAIN_TITLE,"","",""].map(csvEscape).join(";"));
+      lines.push([`${month} ${year}`,"","",""].map(csvEscape).join(";"));
+      lines.push(["","","",""].join(";"));
+      lines.push(["Beleg","Datum","Betrag (€)","Beschreibung"].map(csvEscape).join(";"));
+
+      rows.forEach(exp => {
+        const dateRaw = String(exp?.date ?? "").trim();
+        const amountRaw = String(exp?.amount ?? "").trim();
+        const descRaw = String(exp?.desc ?? "").trim();
+        const receiptRaw = String(exp?.receipt ?? "").trim();
+        if (!(dateRaw || amountRaw || descRaw || receiptRaw)) return;
+
+        const amount = parseAmount(exp?.amount);
+        total += amount;
+
+        const dateDe = dateRaw ? formatDateGerman(dateRaw) : "";
+        const amountDe = amount ? (Math.round(amount * 100) / 100).toFixed(2).replace(".", ",") : "";
+
+        lines.push([
+          exp?.receipt || "",
+          dateDe,
+          amountDe,
+          exp?.desc || ""
+        ].map(csvEscape).join(";"));
+      });
+
+      const net = total / 1.19;
+      const vat = total - net;
+
+      const totalDe = (Math.round(total * 100) / 100).toFixed(2).replace(".", ",");
+      const netDe = (Math.round(net * 100) / 100).toFixed(2).replace(".", ",");
+      const vatDe = (Math.round(vat * 100) / 100).toFixed(2).replace(".", ",");
+
+      lines.push(["","","",""].join(";"));
+      lines.push(["Gesamtsumme (Brutto):","", totalDe, ""].map(csvEscape).join(";"));
+      lines.push(["Nettobetrag:","", netDe, ""].map(csvEscape).join(";"));
+      lines.push(["Mehrwertsteuer (19%):","", vatDe, ""].map(csvEscape).join(";"));
+
+      downloadTextFile(`Ausgaben_${month}_${year}.csv`, lines.join("\n"), "text/csv;charset=utf-8");
+    }
+
+    function exportQuarterCSV() {
+      const info = getQuarterRows();
+      if (!info.q || !info.year) {
+        alert("Bitte Quartal und Jahr auswählen (oder Monat+Jahr).");
+        return;
+      }
+
+    // --- Electron offline XLSX export (optional) ---
+    function canUseDesktopXlsx() {
+      return typeof window !== "undefined" && window.desktopApp && typeof window.desktopApp.saveXlsx === "function";
+    }
+
+    function exportMonthXlsxViaDesktop() {
+      const month = getSelectedMonthName();
+      const year = getSelectedYear();
+
+      const rows = (expenses || []).filter(exp => exp && !isHiddenRentRow(exp));
+
+      let total = 0;
+      const items = [];
+
+      rows.forEach(exp => {
+        const dateRaw = String(exp?.date ?? "").trim();
+        const amountRaw = String(exp?.amount ?? "").trim();
+        const descRaw = String(exp?.desc ?? "").trim();
+        const receiptRaw = String(exp?.receipt ?? "").trim();
+        if (!(dateRaw || amountRaw || descRaw || receiptRaw)) return;
+
+        const amount = parseAmount(exp?.amount);
+        total += amount;
+
+        items.push({
+          receipt: exp?.receipt || "",
+          date: dateRaw || "",
+          amount: amount,
+          desc: exp?.desc || ""
+        });
+      });
+
+      return window.desktopApp.saveXlsx({
+        type: "month",
+        mainTitle: EXCEL_MAIN_TITLE,
+        periodTitle: `${month} ${year}`,
+        sheetName: "Ausgaben",
+        filename: `Ausgaben_${month}_${year}.xlsx`,
+        items,
+        totals: { total, vatRate: 0.19 }
+      });
+    }
+
+    function exportQuarterXlsxViaDesktop() {
+      const info = getQuarterRows();
+      if (!info.q || !info.year) {
+        alert("Bitte Quartal und Jahr auswählen (oder Monat+Jahr).");
+        return;
+      }
+
+      let total = 0;
+      const items = [];
+
+      (info.rows || []).forEach(exp => {
+        if (exp && exp.__monthHeader) {
+          const monthName = MONTH_NAMES[exp.month] || exp.month;
+          items.push({ __monthHeader: true, label: `${monthName} ${exp.year}` });
+          return;
+        }
+
+        const dateRaw = String(exp?.date ?? "").trim();
+        const amountRaw = String(exp?.amount ?? "").trim();
+        const descRaw = String(exp?.desc ?? "").trim();
+        const receiptRaw = String(exp?.receipt ?? "").trim();
+        if (!(dateRaw || amountRaw || descRaw || receiptRaw)) return;
+
+        const amount = parseAmount(exp?.amount);
+        total += amount;
+
+        items.push({
+          receipt: exp?.receipt || "",
+          date: dateRaw || "",
+          amount: amount,
+          desc: exp?.desc || ""
+        });
+      });
+
+      return window.desktopApp.saveXlsx({
+        type: "quarter",
+        mainTitle: EXCEL_MAIN_TITLE,
+        periodTitle: `Q${info.q} ${info.year}`,
+        sheetName: `Ausgaben_Q${info.q}`,
+        filename: `Ausgaben_Q${info.q}_${info.year}.xlsx`,
+        items,
+        totals: { total, vatRate: 0.19 }
+      });
+    }
+
+      let total = 0;
+      const lines = [];
+      lines.push("sep=;");
+
+      lines.push([EXCEL_MAIN_TITLE,"","",""].map(csvEscape).join(";"));
+      lines.push([`Q${info.q} ${info.year}`,"","",""].map(csvEscape).join(";"));
+      lines.push(["","","",""].join(";"));
+      lines.push(["Beleg","Datum","Betrag (€)","Beschreibung"].map(csvEscape).join(";"));
+
+      (info.rows || []).forEach(exp => {
+        if (exp && exp.__monthHeader) {
+          const monthName = MONTH_NAMES[exp.month] || exp.month;
+          lines.push(["","","", `${monthName} ${exp.year}`].map(csvEscape).join(";"));
+          return;
+        }
+
+        const dateRaw = String(exp?.date ?? "").trim();
+        const amountRaw = String(exp?.amount ?? "").trim();
+        const descRaw = String(exp?.desc ?? "").trim();
+        const receiptRaw = String(exp?.receipt ?? "").trim();
+        if (!(dateRaw || amountRaw || descRaw || receiptRaw)) return;
+
+        const amount = parseAmount(exp?.amount);
+        total += amount;
+
+        const dateDe = dateRaw ? formatDateGerman(dateRaw) : "";
+        const amountDe = amount ? (Math.round(amount * 100) / 100).toFixed(2).replace(".", ",") : "";
+
+        lines.push([
+          exp?.receipt || "",
+          dateDe,
+          amountDe,
+          exp?.desc || ""
+        ].map(csvEscape).join(";"));
+      });
+
+      const net = total / 1.19;
+      const vat = total - net;
+
+      const totalDe = (Math.round(total * 100) / 100).toFixed(2).replace(".", ",");
+      const netDe = (Math.round(net * 100) / 100).toFixed(2).replace(".", ",");
+      const vatDe = (Math.round(vat * 100) / 100).toFixed(2).replace(".", ",");
+
+      lines.push(["","","",""].join(";"));
+      lines.push(["Gesamtsumme (Brutto):","", totalDe, ""].map(csvEscape).join(";"));
+      lines.push(["Nettobetrag:","", netDe, ""].map(csvEscape).join(";"));
+      lines.push(["Mehrwertsteuer (19%):","", vatDe, ""].map(csvEscape).join(";"));
+
+      downloadTextFile(`Ausgaben_Q${info.q}_${info.year}.csv`, lines.join("\n"), "text/csv;charset=utf-8");
+    }
+
       value = value.trim();
       if (!value) return 0;
 
@@ -1345,6 +1563,13 @@ document.getElementById('lockIcon').addEventListener('click', toggleLock);
     updateEditability();
   
     document.getElementById('excelExportBtn').addEventListener('click', () => {
+      // __CSV_FALLBACK_excelExportBtn
+      if (typeof XLSX === "undefined") {
+        if (canUseDesktopXlsx()) { exportMonthXlsxViaDesktop(); return; }
+        exportMonthCSV();
+        return;
+      }
+
       const month = getSelectedMonthName();
       const year = getSelectedYear();
       const wsData = [
@@ -1426,6 +1651,13 @@ document.getElementById('lockIcon').addEventListener('click', toggleLock);
     });
 
     document.getElementById('quarterExcelBtn').addEventListener('click', () => {
+      // __CSV_FALLBACK_quarterExcelBtn
+      if (typeof XLSX === "undefined") {
+        if (canUseDesktopXlsx()) { exportQuarterXlsxViaDesktop(); return; }
+        exportQuarterCSV();
+        return;
+      }
+
       const info = getQuarterRows();
       if (!info.q || !info.year) {
         alert('Bitte Quartal und Jahr auswählen (oder Monat+Jahr).');
