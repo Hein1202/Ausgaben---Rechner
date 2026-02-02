@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Version 127.01.26)</title>
+  <title>Ausgaben (Version 129.02.26)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
@@ -92,7 +92,7 @@
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 127.01.26</span>
+      <span class="text-sm text-gray-500">Version 129.02.26</span>
     </div>
 
     <div class="flex flex-wrap items-center gap-2 mb-4">
@@ -1052,7 +1052,7 @@ expenseBody.addEventListener('focusin', (e) => {
           isRent: true,
           rentHidden: true, // standardmäßig ausgeblendet
           date: rentDate,
-          amount: "",
+          amount: "392,70",
           desc: "Raummiete",
           receipt: "",      // Belegnummer entfällt in dieser Zeile
           hideDate: false
@@ -1102,6 +1102,11 @@ function isHiddenRentRow(exp) {
             first.date = rentDate;
             changed = true;
           }
+          // Standardwert für Raummiete-Betrag (nur wenn leer)
+          if (!String(first.amount ?? "").trim()) {
+            first.amount = "392,70";
+            changed = true;
+          }
           // kein auto-show mehr anhand Betrag
           if (changed) {
             allExpenses[key] = list;
@@ -1115,7 +1120,7 @@ function isHiddenRentRow(exp) {
           isRent: true,
           rentHidden: true, // standardmäßig ausgeblendet
           date: rentDate,
-          amount: "",
+          amount: "392,70",
           desc: "Raummiete",
           receipt: "",      // Belegnummer entfällt
           hideDate: false
@@ -1153,6 +1158,11 @@ function isHiddenRentRow(exp) {
         }
         if (!String(rentRow.date || "").trim() && rentDate) {
           rentRow.date = rentDate;
+          changed = true;
+        }
+        // Standardwert für Raummiete-Betrag (nur wenn leer)
+        if (!String(rentRow.amount ?? "").trim()) {
+          rentRow.amount = "392,70";
           changed = true;
         }
       }
