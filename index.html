@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="browser-desktop">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ausgaben (Offline) – Version 139.02.26</title>
+  <title>Ausgaben (Offline) – Version 140.02.26</title>
       <link id="tailwindStylesheet" rel="stylesheet" href="assets/tailwind.css" />
   <style>
     body { font-family: sans-serif; background-color: #f7fafc; color: #000000; }
@@ -158,6 +158,46 @@
       font-family: inherit;
     }
 
+  
+
+    /* -----------------------------------------------------------
+       Browser-Ansicht wie EXE: Buttons/Inputs im Tabellenbereich
+       ----------------------------------------------------------- */
+    html.browser-desktop #expenseTable button.insertBtn,
+    html.browser-desktop #expenseTable button.deleteBtn {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 6px !important;
+      margin: 0 !important;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    html.browser-desktop #expenseTable button.insertBtn:disabled,
+    html.browser-desktop #expenseTable button.deleteBtn:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    /* Tabellen-Inputs: „Desktop“-Look (ohne Standard-Button/Border-Optik) */
+    html.browser-desktop #expenseTable input {
+      -webkit-appearance: none;
+      appearance: none;
+      border: 1px solid transparent;
+      background: transparent;
+      box-shadow: none;
+      outline: none;
+      padding: 2px 4px;
+      height: 26px;
+    }
+    html.browser-desktop #expenseTable input:focus {
+      border-color: #9ca3af; /* dezentes Grau */
+      background: #ffffff;
+    }
+
   </style>
 <script src="assets/xlsx.full.min.js"></script>
 </head>
@@ -187,7 +227,7 @@
       <select id="yearSelect" class="border rounded px-2 py-1 text-sm">
       </select>
     </h1>
-      <span class="text-sm text-gray-500">Version 139.02.26</span>
+      <span class="text-sm text-gray-500">Version 140.02.26</span>
     </div>
 
     <div class="flex flex-wrap items-center gap-2 mb-4">
